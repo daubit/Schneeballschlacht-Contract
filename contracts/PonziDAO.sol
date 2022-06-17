@@ -12,7 +12,7 @@ contract PonziDAO is ERC721Payable {
     uint256 private _endTime;
     uint8 private constant MAX_LEVEL = 10;
     uint256 private constant MINT_FEE = 0.1 ether;
-    uint256 private constant TRANSFER_FEE = 0.01 ether;
+    uint256 private constant TRANSFER_FEE = 0.001 ether;
 
     // TokenId => Level
     mapping(uint256 => uint8) private _levels;
@@ -48,7 +48,7 @@ contract PonziDAO is ERC721Payable {
         );
         uint256[] memory partners = _partners[tokenId];
         for (uint256 index = 0; index < partners.length; index++) {
-            require(ownerOf(partners[index]) == to, "No double transfer!");
+            require(ownerOf(partners[index]) != to, "No double transfer!");
         }
         _;
     }
