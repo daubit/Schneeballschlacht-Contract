@@ -208,6 +208,7 @@ contract PonziDAO is ERC721Payable {
         require(block.number >= _endTime, "The End Times havent arrived yet");
 
         // TODO: payout
+        // TODO: maybe event
 
         uint256 lastId = _tokenIdCounter.current() - 1;
         _tokenIdCounter.reset();
