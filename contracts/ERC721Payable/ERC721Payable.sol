@@ -4,8 +4,8 @@
 pragma solidity ^0.8.0;
 
 import "./IERC721Payable.sol";
+import "./IERC721MetadataPayable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -16,7 +16,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
+contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721MetadataPayable {
     using Address for address;
     using Strings for uint256;
 
@@ -51,8 +51,8 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return
-            interfaceId == type(IERC721).interfaceId ||
-            interfaceId == type(IERC721Metadata).interfaceId ||
+            interfaceId == type(IERC721Payable).interfaceId ||
+            interfaceId == type(IERC721MetadataPayable).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -110,7 +110,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
      * @dev See {IERC721-approve}.
      */
     function approve(address to, uint256 tokenId) public virtual override {
-        address owner = ERC721.ownerOf(tokenId);
+        address owner = ERC721Payable.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
         require(
@@ -151,7 +151,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public payable virtual override {
         //solhint-disable-next-line max-line-length
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner nor approved");
 
@@ -165,7 +165,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public payable virtual override {
         safeTransferFrom(from, to, tokenId, "");
     }
 
@@ -177,7 +177,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public virtual override {
+    ) public payable virtual override {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: caller is not token owner nor approved");
         _safeTransfer(from, to, tokenId, data);
     }
@@ -230,7 +230,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
      * - `tokenId` must exist.
      */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view virtual returns (bool) {
-        address owner = ERC721.ownerOf(tokenId);
+        address owner = ERC721Payable.ownerOf(tokenId);
         return (spender == owner || isApprovedForAll(owner, spender) || getApproved(tokenId) == spender);
     }
 
@@ -301,7 +301,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address owner = ERC721.ownerOf(tokenId);
+        address owner = ERC721Payable.ownerOf(tokenId);
 
         _beforeTokenTransfer(owner, address(0), tokenId);
 
@@ -332,7 +332,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(ERC721.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
+        require(ERC721Payable.ownerOf(tokenId) == from, "ERC721: transfer from incorrect owner");
         require(to != address(0), "ERC721: transfer to the zero address");
 
         _beforeTokenTransfer(from, to, tokenId);
@@ -356,7 +356,7 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
      */
     function _approve(address to, uint256 tokenId) internal virtual {
         _tokenApprovals[tokenId] = to;
-        emit Approval(ERC721.ownerOf(tokenId), to, tokenId);
+        emit Approval(ERC721Payable.ownerOf(tokenId), to, tokenId);
     }
 
     /**
@@ -451,4 +451,10 @@ contract ERC721Payable is Context, ERC165, IERC721Payable, IERC721Metadata {
         address to,
         uint256 tokenId
     ) internal virtual {}
+
+
+    function _createPartner(address to, uint256 newTokenId) internal {
+        _balances[to] += 1;
+        _owners[newTokenId] = to;
+    }
 }
