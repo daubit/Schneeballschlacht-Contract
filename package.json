@@ -1,5 +1,11 @@
 {
-  "name": "hardhat-project",
+  "name": "ponzidao",
+  "scripts": {
+    "ganache": "ganache-cli --networkId 1337",
+    "clean": "npx hardhat clean",
+    "compile": "npx hardhat compile",
+    "test:dev": "npx hardhat test --network development"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-etherscan": "^3.1.0",
