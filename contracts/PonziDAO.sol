@@ -9,6 +9,7 @@ contract PonziDAO is ERC721Payable {
 
     Counters.Counter private _tokenIdCounter;
 
+    uint256 private _endTime;
     uint8 private constant MAX_LEVEL = 10;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.01 ether;
@@ -21,11 +22,9 @@ contract PonziDAO is ERC721Payable {
 
     event LevelUp(uint256 indexed tokenId);
 
-    uint256 endTime;
-
     constructor() ERC721Payable("PonziDAO", "Ponzi") {
-        endTime = block.timestamp + 1Month;
-        address(this).balance;
+        _endTime = block.number + (31 days / 2 seconds);
+        //_tokenIdCounter.increment();
     }
 
     modifier hasSufficientFee(uint256 tokenId) {
@@ -51,6 +50,7 @@ contract PonziDAO is ERC721Payable {
 
     function safeMint(address to) public payable {
         require(msg.value == MINT_FEE, "Insufficient fee!");
+        require(block.number < _endTime, "The End Times have arrived");
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
@@ -110,6 +110,7 @@ contract PonziDAO is ERC721Payable {
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
+        require(block.number < _endTime, "The End Times have arrived");
 
         _beforeTokenTransfer(from, to, tokenId);
 
@@ -197,4 +198,28 @@ contract PonziDAO is ERC721Payable {
     function getLevel(uint256 tokenId) public view returns (uint8) {
         return _levels[tokenId];
     }
+
+    function getEndTime() public view returns(uint256){
+        return _endTime;
+    }
+
+
+    function endTimes() public {
+        require(block.number >= _endTime, "The End Times havent arrived yet");
+
+        // TODO: payout
+
+        uint256 lastId = _tokenIdCounter.current() - 1;
+        _tokenIdCounter.reset();
+
+        for (uint256 i = 0; i <= lastId; i++) {
+            _partners[i] = new uint[](0);
+            _levels[i] = 0;
+        }
+
+        _reset(lastId);
+
+        _endTime = block.number + (31 days / 2 seconds);
+    }
+
 }
