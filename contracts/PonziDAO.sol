@@ -4,6 +4,11 @@ pragma solidity 0.8.15;
 import "./ERC721Payable/ERC721Payable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+// TODO: payout
+// TODO: maybe event
+// TODO: refactor transfer to throw func
+// TODO: refactor
+// TODO: calc ban hit when throwing snowball
 contract PonziDAO is ERC721Payable {
     using Counters for Counters.Counter;
 
@@ -226,9 +231,6 @@ contract PonziDAO is ERC721Payable {
 
     function endTimes() external {
         require(block.number >= _endTime, "The End Times havent arrived yet");
-
-        // TODO: payout
-        // TODO: maybe event
 
         uint256 total = totalSupply();
         _tokenIdCounter.reset();
