@@ -40,6 +40,19 @@ contract PonziDAO is ERC721Payable {
         _;
     }
 
+    modifier isTransferable(uint256 tokenId, address to) {
+        require(
+            _levels[tokenId] != MAX_LEVEL ||
+                _partners[tokenId].length != MAX_LEVEL + 1,
+            "Cannot transfer"
+        );
+        uint256[] memory partners = _partners[tokenId];
+        for (uint256 index = 0; index < partners.length; index++) {
+            require(ownerOf(partners[index]) == to, "No double transfer!");
+        }
+        _;
+    }
+
     function _baseURI() internal pure override returns (string memory) {
         return "";
     }
@@ -68,12 +81,7 @@ contract PonziDAO is ERC721Payable {
         _partners[tokenId] = new uint256[](0);
     }
 
-    function transfer(address to, uint256 tokenId)
-        public
-        payable
-        checkToken(tokenId)
-        checkFee(tokenId)
-    {
+    function transfer(address to, uint256 tokenId) public payable {
         _transfer(msg.sender, to, tokenId);
     }
 
@@ -81,7 +89,7 @@ contract PonziDAO is ERC721Payable {
         address from,
         address to,
         uint256 tokenId
-    ) public payable override checkToken(tokenId) checkFee(tokenId) {
+    ) public payable override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: caller is not token owner nor approved"
@@ -97,7 +105,7 @@ contract PonziDAO is ERC721Payable {
         address from,
         address to,
         uint256 tokenId
-    ) public payable override checkToken(tokenId) checkFee(tokenId) {
+    ) public payable override {
         safeTransferFrom(from, to, tokenId, "");
     }
 
@@ -109,7 +117,7 @@ contract PonziDAO is ERC721Payable {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public payable override checkToken(tokenId) checkFee(tokenId) {
+    ) public payable override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: caller is not token owner nor approved"
@@ -121,17 +129,22 @@ contract PonziDAO is ERC721Payable {
         address from,
         address to,
         uint256 tokenId
-    ) internal virtual override {
+    )
+        internal
+        virtual
+        override
+        checkToken(tokenId)
+        checkFee(tokenId)
+        isTransferable(tokenId, to)
+    {
         require(
-            ERC721Payable.ownerOf(tokenId) == from,
+            ownerOf(tokenId) == from,
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
         require(block.number < _endTime, "The End Times have arrived");
 
         _beforeTokenTransfer(from, to, tokenId);
-
-        isTransferable(tokenId, to);
 
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
@@ -153,18 +166,6 @@ contract PonziDAO is ERC721Payable {
         emit Transfer(from, to, tokenId);
 
         _afterTokenTransfer(from, to, tokenId);
-    }
-
-    function isTransferable(uint256 tokenId, address to) internal view {
-        require(
-            _levels[tokenId] != MAX_LEVEL ||
-                _partners[tokenId].length != MAX_LEVEL + 1,
-            "Cannot transfer"
-        );
-        uint256[] memory partners = _partners[tokenId];
-        for (uint256 index = 0; index < partners.length; index++) {
-            require(ownerOf(partners[index]) == to, "No double transfer!");
-        }
     }
 
     function levelup(uint256 tokenId) internal {
@@ -199,7 +200,7 @@ contract PonziDAO is ERC721Payable {
     }
 
     function getPartnerTokenIds(uint256 tokenId)
-        public
+        external
         view
         returns (uint256[] memory)
     {
@@ -211,11 +212,11 @@ contract PonziDAO is ERC721Payable {
         return partners;
     }
 
-    function getLevel(uint256 tokenId) public view returns (uint8) {
+    function getLevel(uint256 tokenId) external view returns (uint8) {
         return _levels[tokenId];
     }
 
-    function getEndTime() public view returns (uint256) {
+    function getEndTime() external view returns (uint256) {
         return _endTime;
     }
 
@@ -223,7 +224,7 @@ contract PonziDAO is ERC721Payable {
         return _tokenIdCounter.current() - 1;
     }
 
-    function endTimes() public {
+    function endTimes() external {
         require(block.number >= _endTime, "The End Times havent arrived yet");
 
         // TODO: payout
