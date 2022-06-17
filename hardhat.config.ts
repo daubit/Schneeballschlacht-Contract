@@ -19,7 +19,7 @@ const polygonNodeUrl = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_M
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.15",
+  solidity: "0.8.12",
   networks: {
     development: {
       url: "http://127.0.0.1:8545/",
@@ -34,7 +34,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       polygon: process.env.POLYSCAN_KEY!,
-      polygonMumbai: process.env.POLYSCAN_KEY!,
+      polygonMumbai: process.env.POLYSCAN_KEY,
     },
   },
 };
