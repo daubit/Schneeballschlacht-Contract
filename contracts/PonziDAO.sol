@@ -24,7 +24,7 @@ contract PonziDAO is ERC721Payable {
 
     constructor() ERC721Payable("PonziDAO", "Ponzi") {
         _endTime = block.number + (31 days / 2 seconds);
-        //_tokenIdCounter.increment();
+        // _tokenIdCounter.increment();
     }
 
     modifier hasSufficientFee(uint256 tokenId) {
@@ -46,6 +46,10 @@ contract PonziDAO is ERC721Payable {
         returns (string memory)
     {
         return string(abi.encodePacked(_baseURI(), _levels[tokenId]));
+    }
+
+    function mint(address to) external payable {
+        safeMint(to);
     }
 
     function safeMint(address to) public payable {
@@ -169,7 +173,7 @@ contract PonziDAO is ERC721Payable {
         }
     }
 
-    function randomIndex(uint256 length) public view returns (uint256) {
+    function randomIndex(uint256 length) internal view returns (uint256) {
         bytes32 hashValue = keccak256(
             abi.encodePacked(
                 msg.sender,
@@ -199,10 +203,13 @@ contract PonziDAO is ERC721Payable {
         return _levels[tokenId];
     }
 
-    function getEndTime() public view returns(uint256){
+    function getEndTime() public view returns (uint256) {
         return _endTime;
     }
 
+    function totalSupply() public view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
 
     function endTimes() public {
         require(block.number >= _endTime, "The End Times havent arrived yet");
@@ -210,17 +217,16 @@ contract PonziDAO is ERC721Payable {
         // TODO: payout
         // TODO: maybe event
 
-        uint256 lastId = _tokenIdCounter.current() - 1;
+        uint256 total = totalSupply();
         _tokenIdCounter.reset();
 
-        for (uint256 i = 0; i <= lastId; i++) {
-            _partners[i] = new uint[](0);
+        for (uint256 i = 0; i < total; i++) {
+            _partners[i] = new uint256[](0);
             _levels[i] = 0;
         }
 
-        _reset(lastId);
+        _reset(total);
 
         _endTime = block.number + (31 days / 2 seconds);
     }
-
 }
