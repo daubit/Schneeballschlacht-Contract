@@ -24,10 +24,15 @@ contract PonziDAO is ERC721Payable {
 
     constructor() ERC721Payable("PonziDAO", "Ponzi") {
         _endTime = block.number + (31 days / 2 seconds);
-        // _tokenIdCounter.increment();
+        _tokenIdCounter.increment();
     }
 
-    modifier hasSufficientFee(uint256 tokenId) {
+    modifier checkToken(uint256 tokenId) {
+        require(tokenId > 0 && tokenId <= totalSupply(), "Invalid token ID!");
+        _;
+    }
+
+    modifier checkFee(uint256 tokenId) {
         require(
             msg.value == TRANSFER_FEE * _levels[tokenId],
             "Insufficient fee!"
@@ -63,12 +68,20 @@ contract PonziDAO is ERC721Payable {
         _partners[tokenId] = new uint256[](0);
     }
 
+    function transfer(address to, uint256 tokenId)
+        public
+        payable
+        checkToken(tokenId)
+        checkFee(tokenId)
+    {
+        _transfer(msg.sender, to, tokenId);
+    }
+
     function transferFrom(
         address from,
         address to,
         uint256 tokenId
-    ) public payable override hasSufficientFee(tokenId) {
-        //solhint-disable-next-line max-line-length
+    ) public payable override checkToken(tokenId) checkFee(tokenId) {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: caller is not token owner nor approved"
@@ -84,7 +97,7 @@ contract PonziDAO is ERC721Payable {
         address from,
         address to,
         uint256 tokenId
-    ) public payable override hasSufficientFee(tokenId) {
+    ) public payable override checkToken(tokenId) checkFee(tokenId) {
         safeTransferFrom(from, to, tokenId, "");
     }
 
@@ -96,7 +109,7 @@ contract PonziDAO is ERC721Payable {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public payable override hasSufficientFee(tokenId) {
+    ) public payable override checkToken(tokenId) checkFee(tokenId) {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "ERC721: caller is not token owner nor approved"
@@ -163,13 +176,12 @@ contract PonziDAO is ERC721Payable {
         }
         partners[partners.length - 1] = tokenId;
 
-        uint256 index = randomIndex(partners.length);
-        uint256 token = partners[index];
-        if (_levels[token] < MAX_LEVEL) {
-            _levels[token]++;
-            _partners[token] = new uint256[](0);
-
-            emit LevelUp(token);
+        uint256 randIndex = randomIndex(partners.length);
+        uint256 randToken = partners[randIndex];
+        if (_levels[randToken] < MAX_LEVEL) {
+            _levels[randToken]++;
+            _partners[randToken] = new uint256[](0);
+            emit LevelUp(randToken);
         }
     }
 
@@ -208,7 +220,7 @@ contract PonziDAO is ERC721Payable {
     }
 
     function totalSupply() public view returns (uint256) {
-        return _tokenIdCounter.current();
+        return _tokenIdCounter.current() - 1;
     }
 
     function endTimes() public {
@@ -220,7 +232,7 @@ contract PonziDAO is ERC721Payable {
         uint256 total = totalSupply();
         _tokenIdCounter.reset();
 
-        for (uint256 i = 0; i < total; i++) {
+        for (uint256 i = 1; i < total; i++) {
             _partners[i] = new uint256[](0);
             _levels[i] = 0;
         }
