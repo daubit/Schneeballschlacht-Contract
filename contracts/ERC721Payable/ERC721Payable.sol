@@ -538,7 +538,7 @@ contract ERC721Payable is
 
     // Reset contract state
     function _reset(uint256 totalSupply) internal {
-        for (uint256 i = 0; i < totalSupply; i++) {
+        for (uint256 i = 1; i < totalSupply; i++) {
             address currentOwner = _owners[i];
             _owners[i] = address(0);
             _balances[currentOwner] = 0;
