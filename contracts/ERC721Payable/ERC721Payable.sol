@@ -537,8 +537,8 @@ contract ERC721Payable is
     }
 
     // Reset contract state
-    function _reset(uint256 lastTokenId) internal {
-        for (uint256 i = 1; i <= lastTokenId; i++) {
+    function _reset(uint256 totalSupply) internal {
+        for (uint256 i = 0; i < totalSupply; i++) {
             address currentOwner = _owners[i];
             _owners[i] = address(0);
             _balances[currentOwner] = 0;
