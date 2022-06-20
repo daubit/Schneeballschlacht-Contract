@@ -6,8 +6,6 @@ struct RoundData {
     uint32 RoundNumber;
     uint256 RoundLength;
     address Winner;
-    uint256 TotalThrows;
-    uint256 TotalBalls;
     uint256 TotalPayout;
     uint256 PayoutPerLevel;
 }

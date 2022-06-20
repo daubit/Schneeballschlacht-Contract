@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 
 import "./IERC721Levelable.sol";
 import "./IERC721MetadataLevelable.sol";
+import "./IERC721EnumerableSimple.sol";
+import "./SnowballStructs.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -23,7 +25,8 @@ abstract contract ERC721Group is
     Context,
     ERC165,
     IERC721Levelable,
-    IERC721MetadataLevelable
+    IERC721MetadataLevelable,
+    IERC721EnumerableSimple
 {
     using Address for address;
     using Strings for uint256;
@@ -46,6 +49,12 @@ abstract contract ERC721Group is
     // Mapping owner address to token count
     mapping(uint256 => mapping(address => uint256)) private _balances;
 
+    // Mapping owner address to index to token id
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _tokenOwners;
+
+    // Mapping token id to token index in _tokenOwners
+    mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
+
     // Mapping from snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
@@ -57,19 +66,6 @@ abstract contract ERC721Group is
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
 
     mapping(uint256 => Counters.Counter) private _tokenIdCounters;
-
-    struct Round {
-        address winner;
-        uint256 payout;
-        uint256 startHeight;
-        uint256 endHeight;
-    }
-
-    struct Snowball {
-        uint8 level;
-        uint256[] partners;
-        uint256 parentSnowballId;
-    }
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -387,6 +383,8 @@ abstract contract ERC721Group is
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
 
+        _addTokenOwner(to, tokenId);
+
         emit Transfer(address(0), to, tokenId);
 
         _afterTokenTransfer(address(0), to, tokenId);
@@ -413,6 +411,7 @@ abstract contract ERC721Group is
 
         _balances[roundId][owner] -= 1;
         delete _owners[roundId][tokenId];
+        _removeOwner(owner, tokenId);
 
         emit Transfer(owner, address(0), tokenId);
 
@@ -449,6 +448,9 @@ abstract contract ERC721Group is
         _balances[roundId][from] -= 1;
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
+
+        _removeOwner(from, tokenId);
+        _addTokenOwner(to, tokenId);
 
         emit Transfer(from, to, tokenId);
 
@@ -579,5 +581,35 @@ abstract contract ERC721Group is
         });
         uint256 roundId = _roundIdCounter.current();
         _rounds[roundId] = round;
+    }
+
+    function _addTokenOwner(address to, uint256 tokenId) internal {
+        // assumes that balanceOf was already increased
+        uint256 length = balanceOf(to) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        _tokenOwners[round][to][length] = tokenId;
+        _tokenOwnersIndex[round][tokenId] = length;
+    }
+
+    // adapted from from _removeTokenFromOwnerEnumeration (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol)
+    function _removeOwner(address from, uint256 tokenId) internal {
+        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        uint256 lastTokenIndex = balanceOf(from) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = _tokenOwners[round][from][lastTokenIndex];
+
+            _tokenOwners[round][from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            _tokenOwnersIndex[round][lastTokenId] = tokenIndex; // Update the moved token's index
+        }
+
+        // This also deletes the contents at the last position of the array
+        delete _tokenOwnersIndex[round][tokenId];
+        delete _tokenOwners[round][from][lastTokenIndex];
     }
 }
