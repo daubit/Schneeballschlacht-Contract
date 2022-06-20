@@ -1,85 +1,105 @@
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "./ERC721Levelable/ERC721Levelable.sol";
-import "./ISchneeballSchlacht.sol";
+import "./ERC721Round/ERC721Round.sol";
 
 // TODO: payout
 // TODO: maybe event
 // TODO: refactor transfer to throw func
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
-    using Counters for Counters.Counter;
+contract SchneeballSchlacht is ERC721Round {
+    // Mapping from snowball ID to snowball
+    mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
-    Counters.Counter private _tokenIdCounter;
-
-    uint256 private _endTime;
-    uint8 private constant MAX_LEVEL = 20;
-    uint256 private constant MINT_FEE = 0.1 ether;
-    uint256 private constant TRANSFER_FEE = 0.001 ether;
-
-    // TokenId => Level
-    mapping(uint256 => uint8) private _levels;
-
-    // TokenId => sent tokenIds to partners
-    mapping(uint256 => uint256[]) private _partners;
-
-    event LevelUp(uint256 indexed tokenId);
-
-    constructor() ERC721Levelable("SchneeballSchlacht", "Schneeball") {
-        _endTime = block.number + (31 days / 2 seconds);
-        _tokenIdCounter.increment();
-    }
-
-    modifier checkToken(uint256 tokenId) {
-        require(tokenId > 0 && tokenId <= totalSupply(), "Invalid token ID!");
-        _;
+    struct Snowball {
+        uint8 level;
+        uint256[] partners;
+        uint256 parentSnowballId;
     }
 
     modifier checkFee(uint256 tokenId) {
-        require(
-            msg.value == TRANSFER_FEE * _levels[tokenId],
-            "Insufficient fee!"
-        );
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        require(msg.value == TRANSFER_FEE * level, "Insufficient fee!");
         _;
     }
 
     modifier isTransferable(uint256 tokenId, address to) {
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         require(
-            _levels[tokenId] != MAX_LEVEL ||
-                _partners[tokenId].length <= _levels[tokenId] + 1,
+            level != MAX_LEVEL || amountOfPartners <= level + 1,
             "Cannot transfer"
         );
-        uint256[] memory partners = _partners[tokenId];
+        uint256[] memory partners = _snowballs[roundId][tokenId].partners;
         for (uint256 index = 0; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
         }
         _;
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "";
-    }
+    event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
-    function tokenURI(uint256 tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
-        return string(abi.encodePacked(_baseURI(), _levels[tokenId]));
-    }
+    constructor() ERC721Group("SchneeballSchlacht", "Schneeball") {}
 
-    function mint(address to) public payable {
+    function mint(address to) public payable checkDeadline {
         require(msg.value == MINT_FEE, "Insufficient fee!");
-        require(block.number < _endTime, "The End Times have arrived");
+        uint256 roundId = _roundIdCounter.current();
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
+        Snowball memory snowball = Snowball({
+            level: 1,
+            partners: new uint256[](0),
+            parentSnowballId: 0
+        });
+        _snowballs[roundId][tokenId] = snowball;
+    }
 
-        _levels[tokenId] = 1;
-        _partners[tokenId] = new uint256[](0);
+    function getPartnerTokenIds(uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 roundId = _roundIdCounter.current();
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    /**
+     * @dev Returns level from the current round.
+     */
+    function getLevel(uint256 tokenId) public view returns (uint8) {
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
+    }
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8)
+    {
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
     }
 
     function toss(address to, uint256 tokenId)
@@ -87,6 +107,7 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
         payable
         checkToken(tokenId)
         checkFee(tokenId)
+        checkDeadline
         isTransferable(tokenId, to)
     {
         require(
@@ -94,38 +115,49 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
-        require(block.number < _endTime, "The End Times have arrived");
-
+        uint256 roundId = _roundIdCounter.current();
         uint256 newTokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
         _safeMint(to, newTokenId);
 
-        _levels[newTokenId] = _levels[tokenId];
-        _partners[newTokenId] = new uint256[](0);
+        _snowballs[roundId][newTokenId] = Snowball({
+            level: _snowballs[roundId][tokenId].level,
+            parentSnowballId: tokenId,
+            partners: new uint256[](0)
+        });
+        _snowballs[roundId][tokenId].partners.push(newTokenId);
 
-        _partners[tokenId].push(newTokenId);
-
-        if (_partners[tokenId].length == _levels[tokenId] + 1) {
+        if (
+            _snowballs[roundId][tokenId].partners.length ==
+            _snowballs[roundId][tokenId].level + 1
+        ) {
             levelup(tokenId);
         }
     }
 
     function levelup(uint256 tokenId) internal {
-        uint256[] memory partners = new uint256[](
-            _partners[tokenId].length + 1
-        );
-        for (uint256 i = 0; i < _partners[tokenId].length; i++) {
-            partners[i] = _partners[tokenId][i];
+        uint256 roundId = _roundIdCounter.current();
+        uint256 amountOldPartners = _snowballs[roundId][tokenId]
+            .partners
+            .length;
+        uint256[] memory partners = new uint256[](amountOldPartners + 1);
+        for (uint256 i = 0; i < amountOldPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         partners[partners.length - 1] = tokenId;
 
         uint256 randIndex = randomIndex(partners.length);
         uint256 randToken = partners[randIndex];
-        if (_levels[randToken] < MAX_LEVEL) {
-            _levels[randToken]++;
-            _partners[randToken] = new uint256[](0);
-            emit LevelUp(randToken);
+        if (_snowballs[roundId][randToken].level < MAX_LEVEL) {
+            Snowball memory upgradedSnowball = Snowball({
+                level: _snowballs[roundId][randToken].level++,
+                partners: new uint256[](0),
+                parentSnowballId: _snowballs[roundId][randToken]
+                    .parentSnowballId
+            });
+            _snowballs[roundId][randToken] = upgradedSnowball;
+            emit LevelUp(roundId, randToken);
         }
     }
 
@@ -140,103 +172,5 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
             )
         );
         return uint256(hashValue) % length;
-    }
-
-    function getPartnerTokenIds(uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256 amountOfPartners = _partners[tokenId].length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
-            partners[i] = _partners[tokenId][i];
-        }
-        return partners;
-    }
-
-    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256 amountOfPartners = _partners[tokenId].length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
-            partners[i] = _partners[tokenId][i];
-        }
-        return partners;
-    }
-
-    function getLevel(uint256 tokenId) external view returns (uint8) {
-        return _levels[tokenId];
-    }
-
-    function getLevel(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint8)
-    {
-        return _levels[tokenId];
-    }
-
-    function getEndTime() external view returns (uint256) {
-        return _endTime;
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return _tokenIdCounter.current() - 1;
-    }
-
-    function endRound() external {
-        require(block.number >= _endTime, "The End Times havent arrived yet");
-
-        uint256 total = totalSupply();
-        _tokenIdCounter.reset();
-
-        for (uint256 i = 1; i < total; i++) {
-            _partners[i] = new uint256[](0);
-            _levels[i] = 0;
-        }
-
-        // _reset(total);
-
-        _endTime = block.number + (31 days / 2 seconds);
-    }
-
-    function balanceOf(uint32 round, address owner)
-        external
-        view
-        returns (uint256 balance)
-    {
-        require(false, "Unimplemented");
-        return 0;
-    }
-
-    function ownerOf(uint32 round, uint256 tokenId)
-        external
-        view
-        returns (address owner)
-    {
-        require(false, "Unimplemented");
-        return address(0);
-    }
-
-    function getApproved(uint32 round, uint256 tokenId)
-        external
-        view
-        returns (address operator)
-    {
-        require(false, "Unimplemented");
-        return address(0);
-    }
-
-    function isApprovedForAll(
-        uint32 round,
-        address owner,
-        address operator
-    ) external view returns (bool) {
-        require(false, "Unimplemented");
-        return false;
     }
 }
