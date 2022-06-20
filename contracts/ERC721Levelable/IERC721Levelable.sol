@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 /**
  * @dev Required interface of an ERC721 compliant contract.
  */
-interface IERC721Payable is IERC165 {
+interface IERC721Levelable is IERC165 {
     /**
      * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
      */
@@ -30,6 +30,12 @@ interface IERC721Payable is IERC165 {
     function balanceOf(address owner) external view returns (uint256 balance);
 
     /**
+     * @dev Returns the number of tokens in ``owner``'s account. At round
+     */
+    function balanceOf(uint32 round, address owner) external view returns (uint256 balance);
+
+
+    /**
      * @dev Returns the owner of the `tokenId` token.
      *
      * Requirements:
@@ -37,6 +43,16 @@ interface IERC721Payable is IERC165 {
      * - `tokenId` must exist.
      */
     function ownerOf(uint256 tokenId) external view returns (address owner);
+
+    /**
+     * @dev Returns the owner of the `tokenId` token.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     */
+    function ownerOf(uint32 round, uint256 tokenId) external view returns (address owner);
+
 
     /**
      * @dev Safely transfers `tokenId` token from `from` to `to`.
@@ -56,7 +72,7 @@ interface IERC721Payable is IERC165 {
         address to,
         uint256 tokenId,
         bytes calldata data
-    ) external payable;
+    ) external;
 
     /**
      * @dev Safely transfers `tokenId` token from `from` to `to`, checking first that contract recipients
@@ -76,7 +92,7 @@ interface IERC721Payable is IERC165 {
         address from,
         address to,
         uint256 tokenId
-    ) external payable;
+    ) external;
 
     /**
      * @dev Transfers `tokenId` token from `from` to `to`.
@@ -96,7 +112,7 @@ interface IERC721Payable is IERC165 {
         address from,
         address to,
         uint256 tokenId
-    ) external payable;
+    ) external;
 
     /**
      * @dev Gives permission to `to` to transfer `tokenId` token to another account.
@@ -135,9 +151,27 @@ interface IERC721Payable is IERC165 {
     function getApproved(uint256 tokenId) external view returns (address operator);
 
     /**
+     * @dev Returns the account approved for `tokenId` token.
+     *
+     * Requirements:
+     *
+     * - `tokenId` must exist.
+     */
+    function getApproved(uint32 round, uint256 tokenId) external view returns (address operator);
+
+
+    /**
      * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.
      *
      * See {setApprovalForAll}
      */
     function isApprovedForAll(address owner, address operator) external view returns (bool);
+
+        /**
+     * @dev Returns if the `operator` is allowed to manage all of the assets of `owner`.
+     *
+     * See {setApprovalForAll}
+     */
+    function isApprovedForAll(uint32 round, address owner, address operator) external view returns (bool);
+
 }
