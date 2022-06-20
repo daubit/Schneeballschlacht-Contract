@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
@@ -18,7 +19,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-abstract contract ERC721Levelable is
+abstract contract ERC721Group is
     Context,
     ERC165,
     IERC721Levelable,
@@ -26,6 +27,7 @@ abstract contract ERC721Levelable is
 {
     using Address for address;
     using Strings for uint256;
+    using Counters for Counters.Counter;
 
     // Token name
     string private _name;
@@ -33,22 +35,47 @@ abstract contract ERC721Levelable is
     // Token symbol
     string private _symbol;
 
-    // Mapping from token ID to owner address
-    mapping(uint256 => address) private _owners;
+    Counters.Counter private _roundIdCounter;
+
+    // Mapping from round ID to Round
+    mapping(uint256 => Round) private _rounds;
+
+    // Mapping from round to mapping from token ID to owner address
+    mapping(uint256 => mapping(uint256 => address)) private _owners;
 
     // Mapping owner address to token count
-    mapping(address => uint256) private _balances;
+    mapping(uint256 => mapping(address => uint256)) private _balances;
 
-    // Mapping from token ID to approved address
-    mapping(uint256 => address) private _tokenApprovals;
+    // Mapping from snowball ID to snowball
+    mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
     // Mapping from owner to operator approvals
-    mapping(address => mapping(address => bool)) private _operatorApprovals;
+    mapping(uint256 => mapping(address => mapping(address => bool)))
+        private _operatorApprovals;
+
+    // Mapping from token ID to approved address
+    mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
+
+    mapping(uint256 => Counters.Counter) private _tokenIdCounters;
+
+    struct Round {
+        address winner;
+        uint256 payout;
+        uint256 startHeight;
+        uint256 endHeight;
+    }
+
+    struct Snowball {
+        uint8 level;
+        uint256[] partners;
+        uint256 parentSnowballId;
+    }
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
     constructor(string memory name_, string memory symbol_) {
+        _roundIdCounter.increment();
         _name = name_;
         _symbol = symbol_;
     }
@@ -85,7 +112,8 @@ abstract contract ERC721Levelable is
             owner != address(0),
             "ERC721: address zero is not a valid owner"
         );
-        return _balances[owner];
+        uint256 roundId = _roundIdCounter.current();
+        return _balances[roundId][owner];
     }
 
     /**
@@ -98,7 +126,8 @@ abstract contract ERC721Levelable is
         override
         returns (address)
     {
-        address owner = _owners[tokenId];
+        uint256 roundId = _roundIdCounter.current();
+        address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
         return owner;
     }
@@ -149,7 +178,7 @@ abstract contract ERC721Levelable is
      * @dev See {IERC721-approve}.
      */
     function approve(address to, uint256 tokenId) public virtual override {
-        address owner = ERC721Levelable.ownerOf(tokenId);
+        address owner = ERC721Group.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
         require(
@@ -171,8 +200,8 @@ abstract contract ERC721Levelable is
         returns (address)
     {
         _requireMinted(tokenId);
-
-        return _tokenApprovals[tokenId];
+        uint256 roundId = _roundIdCounter.current();
+        return _tokenApprovals[roundId][tokenId];
     }
 
     /**
@@ -196,7 +225,8 @@ abstract contract ERC721Levelable is
         override
         returns (bool)
     {
-        return _operatorApprovals[owner][operator];
+        uint256 roundId = _roundIdCounter.current();
+        return _operatorApprovals[roundId][owner][operator];
     }
 
     /**
@@ -283,7 +313,8 @@ abstract contract ERC721Levelable is
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        return _owners[tokenId] != address(0);
+        uint256 roundId = _roundIdCounter.current();
+        return _owners[roundId][tokenId] != address(0);
     }
 
     /**
@@ -299,7 +330,7 @@ abstract contract ERC721Levelable is
         virtual
         returns (bool)
     {
-        address owner = ERC721Levelable.ownerOf(tokenId);
+        address owner = ERC721Group.ownerOf(tokenId);
         return (spender == owner ||
             isApprovedForAll(owner, spender) ||
             getApproved(tokenId) == spender);
@@ -350,11 +381,11 @@ abstract contract ERC721Levelable is
     function _mint(address to, uint256 tokenId) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
-
+        uint256 roundId = _roundIdCounter.current();
         _beforeTokenTransfer(address(0), to, tokenId);
 
-        _balances[to] += 1;
-        _owners[tokenId] = to;
+        _balances[roundId][to] += 1;
+        _owners[roundId][tokenId] = to;
 
         emit Transfer(address(0), to, tokenId);
 
@@ -372,15 +403,16 @@ abstract contract ERC721Levelable is
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address owner = ERC721Levelable.ownerOf(tokenId);
+        address owner = ERC721Group.ownerOf(tokenId);
+        uint256 roundId = _roundIdCounter.current();
 
         _beforeTokenTransfer(owner, address(0), tokenId);
 
         // Clear approvals
         _approve(address(0), tokenId);
 
-        _balances[owner] -= 1;
-        delete _owners[tokenId];
+        _balances[roundId][owner] -= 1;
+        delete _owners[roundId][tokenId];
 
         emit Transfer(owner, address(0), tokenId);
 
@@ -404,19 +436,19 @@ abstract contract ERC721Levelable is
         uint256 tokenId
     ) internal virtual {
         require(
-            ERC721Levelable.ownerOf(tokenId) == from,
+            ERC721Group.ownerOf(tokenId) == from,
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
-
+        uint256 roundId = _roundIdCounter.current();
         _beforeTokenTransfer(from, to, tokenId);
 
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
 
-        _balances[from] -= 1;
-        _balances[to] += 1;
-        _owners[tokenId] = to;
+        _balances[roundId][from] -= 1;
+        _balances[roundId][to] += 1;
+        _owners[roundId][tokenId] = to;
 
         emit Transfer(from, to, tokenId);
 
@@ -429,8 +461,9 @@ abstract contract ERC721Levelable is
      * Emits an {Approval} event.
      */
     function _approve(address to, uint256 tokenId) internal virtual {
-        _tokenApprovals[tokenId] = to;
-        emit Approval(ERC721Levelable.ownerOf(tokenId), to, tokenId);
+        uint256 roundId = _roundIdCounter.current();
+        _tokenApprovals[roundId][tokenId] = to;
+        emit Approval(ERC721Group.ownerOf(tokenId), to, tokenId);
     }
 
     /**
@@ -444,7 +477,8 @@ abstract contract ERC721Levelable is
         bool approved
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
-        _operatorApprovals[owner][operator] = approved;
+        uint256 roundId = _roundIdCounter.current();
+        _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
 
@@ -534,4 +568,16 @@ abstract contract ERC721Levelable is
         address to,
         uint256 tokenId
     ) internal virtual {}
+
+    function startRound() external {
+        uint256 endHeight = block.number + (31 days / 2 seconds);
+        Round memory round = Round({
+            startHeight: block.number,
+            endHeight: endHeight,
+            winner: address(0),
+            payout: 0
+        });
+        uint256 roundId = _roundIdCounter.current();
+        _rounds[roundId] = round;
+    }
 }
