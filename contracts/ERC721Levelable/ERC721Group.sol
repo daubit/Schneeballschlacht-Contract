@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 
 import "./IERC721Levelable.sol";
 import "./IERC721MetadataLevelable.sol";
+import "../ISchneeballSchlacht.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -20,6 +21,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * {ERC721Enumerable}.
  */
 abstract contract ERC721Group is
+    ISchneeballSchlacht,
     Context,
     ERC165,
     IERC721Levelable,
@@ -29,6 +31,10 @@ abstract contract ERC721Group is
     using Strings for uint256;
     using Counters for Counters.Counter;
 
+    uint8 private constant MAX_LEVEL = 20;
+    uint256 private constant MINT_FEE = 0.1 ether;
+    uint256 private constant TRANSFER_FEE = 0.001 ether;
+
     // Token name
     string private _name;
 
@@ -36,6 +42,7 @@ abstract contract ERC721Group is
     string private _symbol;
 
     Counters.Counter private _roundIdCounter;
+    Counters.Counter private _tokenIdCounter;
 
     // Mapping from round ID to Round
     mapping(uint256 => Round) private _rounds;
@@ -56,8 +63,6 @@ abstract contract ERC721Group is
     // Mapping from token ID to approved address
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
 
-    mapping(uint256 => Counters.Counter) private _tokenIdCounters;
-
     struct Round {
         address winner;
         uint256 payout;
@@ -70,6 +75,42 @@ abstract contract ERC721Group is
         uint256[] partners;
         uint256 parentSnowballId;
     }
+
+    modifier checkToken(uint256 tokenId) {
+        require(tokenId > 0 && tokenId <= totalSupply(), "Invalid token ID!");
+        _;
+    }
+
+    modifier checkDeadline() {
+        uint256 roundId = _roundIdCounter.current();
+        uint256 endHeight = _rounds[roundId].endHeight;
+        require(block.number < endHeight, "Deadline has been reached!");
+        _;
+    }
+
+    modifier checkFee(uint256 tokenId) {
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        require(msg.value == TRANSFER_FEE * level, "Insufficient fee!");
+        _;
+    }
+
+    modifier isTransferable(uint256 tokenId, address to) {
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        require(
+            level != MAX_LEVEL || amountOfPartners <= level + 1,
+            "Cannot transfer"
+        );
+        uint256[] memory partners = _snowballs[roundId][tokenId].partners;
+        for (uint256 index = 0; index < partners.length; index++) {
+            require(ownerOf(partners[index]) != to, "No double transfer!");
+        }
+        _;
+    }
+
+    event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -116,6 +157,18 @@ abstract contract ERC721Group is
         return _balances[roundId][owner];
     }
 
+    function balanceOf(uint32 roundId, address owner)
+        external
+        view
+        returns (uint256)
+    {
+        require(
+            owner != address(0),
+            "ERC721: address zero is not a valid owner"
+        );
+        return _balances[roundId][owner];
+    }
+
     /**
      * @dev See {IERC721-ownerOf}.
      */
@@ -127,6 +180,16 @@ abstract contract ERC721Group is
         returns (address)
     {
         uint256 roundId = _roundIdCounter.current();
+        address owner = _owners[roundId][tokenId];
+        require(owner != address(0), "ERC721: invalid token ID");
+        return owner;
+    }
+
+    function ownerOf(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (address)
+    {
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
         return owner;
@@ -153,16 +216,24 @@ abstract contract ERC721Group is
         public
         view
         virtual
-        override
         returns (string memory)
     {
-        _requireMinted(tokenId);
-
-        string memory baseURI = _baseURI();
+        uint256 roundId = _roundIdCounter.current();
         return
-            bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, tokenId.toString()))
-                : "";
+            string(
+                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+            );
+    }
+
+    function tokenURI(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (string memory)
+    {
+        return
+            string(
+                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+            );
     }
 
     /**
@@ -204,6 +275,15 @@ abstract contract ERC721Group is
         return _tokenApprovals[roundId][tokenId];
     }
 
+    function getApproved(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (address)
+    {
+        _requireMinted(tokenId);
+        return _tokenApprovals[roundId][tokenId];
+    }
+
     /**
      * @dev See {IERC721-setApprovalForAll}.
      */
@@ -226,6 +306,14 @@ abstract contract ERC721Group is
         returns (bool)
     {
         uint256 roundId = _roundIdCounter.current();
+        return _operatorApprovals[roundId][owner][operator];
+    }
+
+    function isApprovedForAll(
+        uint32 roundId,
+        address owner,
+        address operator
+    ) external view returns (bool) {
         return _operatorApprovals[roundId][owner][operator];
     }
 
@@ -334,6 +422,20 @@ abstract contract ERC721Group is
         return (spender == owner ||
             isApprovedForAll(owner, spender) ||
             getApproved(tokenId) == spender);
+    }
+
+    function mint(address to) public payable checkDeadline {
+        require(msg.value == MINT_FEE, "Insufficient fee!");
+        uint256 roundId = _roundIdCounter.current();
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(to, tokenId);
+        Snowball memory snowball = Snowball({
+            level: 1,
+            partners: new uint256[](0),
+            parentSnowballId: 0
+        });
+        _snowballs[roundId][tokenId] = snowball;
     }
 
     /**
@@ -569,6 +671,64 @@ abstract contract ERC721Group is
         uint256 tokenId
     ) internal virtual {}
 
+    function totalSupply() public view returns (uint256) {
+        return _tokenIdCounter.current() - 1;
+    }
+
+    function getPartnerTokenIds(uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 roundId = _roundIdCounter.current();
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    /**
+     * @dev Returns level from the current round.
+     */
+    function getLevel(uint256 tokenId) public view returns (uint8) {
+        uint256 roundId = _roundIdCounter.current();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
+    }
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8)
+    {
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
+    }
+
+    function getEndHeight() public view returns (uint256) {
+        uint256 roundId = _roundIdCounter.current();
+        return _rounds[roundId].endHeight;
+    }
+
+    function getEndHeight(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].endHeight;
+    }
+
     function startRound() external {
         uint256 endHeight = block.number + (31 days / 2 seconds);
         Round memory round = Round({
@@ -579,5 +739,96 @@ abstract contract ERC721Group is
         });
         uint256 roundId = _roundIdCounter.current();
         _rounds[roundId] = round;
+    }
+
+    function endRound() external {
+        require(
+            block.number >= getEndHeight(),
+            "The end height havent arrived yet"
+        );
+
+        uint256 total = totalSupply();
+        _tokenIdCounter.reset();
+
+        // for (uint256 i = 1; i < total; i++) {
+        //     _partners[i] = new uint256[](0);
+        //     _levels[i] = 0;
+        // }
+
+        // _reset(total);
+
+        // _endTime = block.number + (31 days / 2 seconds);
+    }
+
+    function toss(address to, uint256 tokenId)
+        public
+        payable
+        checkToken(tokenId)
+        checkFee(tokenId)
+        checkDeadline
+        isTransferable(tokenId, to)
+    {
+        require(
+            ownerOf(tokenId) == msg.sender,
+            "ERC721: transfer from incorrect owner"
+        );
+        require(to != address(0), "ERC721: transfer to the zero address");
+        uint256 roundId = _roundIdCounter.current();
+        uint256 newTokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+
+        _safeMint(to, newTokenId);
+
+        _snowballs[roundId][newTokenId] = Snowball({
+            level: _snowballs[roundId][tokenId].level,
+            parentSnowballId: tokenId,
+            partners: new uint256[](0)
+        });
+        _snowballs[roundId][tokenId].partners.push(newTokenId);
+
+        if (
+            _snowballs[roundId][tokenId].partners.length ==
+            _snowballs[roundId][tokenId].level + 1
+        ) {
+            levelup(tokenId);
+        }
+    }
+
+    function levelup(uint256 tokenId) internal {
+        uint256 roundId = _roundIdCounter.current();
+        uint256 amountOldPartners = _snowballs[roundId][tokenId]
+            .partners
+            .length;
+        uint256[] memory partners = new uint256[](amountOldPartners + 1);
+        for (uint256 i = 0; i < amountOldPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        partners[partners.length - 1] = tokenId;
+
+        uint256 randIndex = randomIndex(partners.length);
+        uint256 randToken = partners[randIndex];
+        if (_snowballs[roundId][randToken].level < MAX_LEVEL) {
+            Snowball memory upgradedSnowball = Snowball({
+                level: _snowballs[roundId][randToken].level++,
+                partners: new uint256[](0),
+                parentSnowballId: _snowballs[roundId][randToken]
+                    .parentSnowballId
+            });
+            _snowballs[roundId][randToken] = upgradedSnowball;
+            emit LevelUp(roundId, randToken);
+        }
+    }
+
+    function randomIndex(uint256 length) internal view returns (uint256) {
+        bytes32 hashValue = keccak256(
+            abi.encodePacked(
+                msg.sender,
+                blockhash(block.number - 1),
+                block.number,
+                block.timestamp,
+                block.difficulty
+            )
+        );
+        return uint256(hashValue) % length;
     }
 }
