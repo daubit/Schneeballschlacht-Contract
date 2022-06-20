@@ -15,7 +15,7 @@ contract PonziDAO is ERC721Payable {
     Counters.Counter private _tokenIdCounter;
 
     uint256 private _endTime;
-    uint8 private constant MAX_LEVEL = 10;
+    uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
 
@@ -48,7 +48,7 @@ contract PonziDAO is ERC721Payable {
     modifier isTransferable(uint256 tokenId, address to) {
         require(
             _levels[tokenId] != MAX_LEVEL ||
-                _partners[tokenId].length != MAX_LEVEL + 1,
+                _partners[tokenId].length <= _levels[tokenId] + 1,
             "Cannot transfer"
         );
         uint256[] memory partners = _partners[tokenId];
