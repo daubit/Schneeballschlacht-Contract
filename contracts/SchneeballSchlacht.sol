@@ -24,6 +24,9 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
 
     // TokenId => sent tokenIds to partners
     mapping(uint256 => uint256[]) private _partners;
+    mapping(uint32 => RoundData) private _roundData;
+    mapping(address => mapping(uint256 => uint256)) private _tokenOwners;
+    mapping(address => uint256) private _tokenOwnersLength;
 
     event LevelUp(uint256 indexed tokenId);
 

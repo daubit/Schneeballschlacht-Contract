@@ -1,6 +1,19 @@
-pragma solidity 0.8.15;
+pragma solidity ^0.8.0;
 
-interface ISchneeballSchlacht {
+import "./ERC721Levelable/IERC721Levelable.sol";
+
+struct RoundData {
+    uint32 RoundNumber;
+    uint256 RoundLength;
+    address Winner;
+    uint256 TotalThrows;
+    uint256 TotalBalls;
+    uint256 TotalPayout;
+    uint256 PayoutPerLevel;
+}
+
+interface ISchneeballSchlacht is IERC721Levelable {
+
     function toss(address to, uint256 tokenId) external payable;
 
     function mint(address to) external payable;
@@ -25,4 +38,8 @@ interface ISchneeballSchlacht {
     function totalSupply() external view returns (uint256);
 
     function endRound() external;
+
+    function getRoundData(uint32 round) external view returns (RoundData memory);
+    
+    function getTokensOfAddress(uint32 round, address addr) external view returns (uint256[] memory);
 }
