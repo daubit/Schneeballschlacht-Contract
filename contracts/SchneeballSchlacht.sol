@@ -1,15 +1,15 @@
-//SPDX-License-Identifier: MIT
 pragma solidity 0.8.15;
 
-import "./ERC721Payable/ERC721Payable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "./ERC721Levelable/ERC721Levelable.sol";
+import "./ISchneeballSchlacht.sol";
 
 // TODO: payout
 // TODO: maybe event
 // TODO: refactor transfer to throw func
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract PonziDAO is ERC721Payable {
+contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
@@ -27,7 +27,7 @@ contract PonziDAO is ERC721Payable {
 
     event LevelUp(uint256 indexed tokenId);
 
-    constructor() ERC721Payable("PonziDAO", "Ponzi") {
+    constructor() ERC721Levelable("SchneeballSchlacht", "Schneeball") {
         _endTime = block.number + (31 days / 2 seconds);
         _tokenIdCounter.increment();
     }
@@ -71,11 +71,7 @@ contract PonziDAO is ERC721Payable {
         return string(abi.encodePacked(_baseURI(), _levels[tokenId]));
     }
 
-    function mint(address to) external payable {
-        safeMint(to);
-    }
-
-    function safeMint(address to) public payable {
+    function mint(address to) public payable {
         require(msg.value == MINT_FEE, "Insufficient fee!");
         require(block.number < _endTime, "The End Times have arrived");
         uint256 tokenId = _tokenIdCounter.current();
@@ -86,78 +82,24 @@ contract PonziDAO is ERC721Payable {
         _partners[tokenId] = new uint256[](0);
     }
 
-    function transfer(address to, uint256 tokenId) public payable {
-        _transfer(msg.sender, to, tokenId);
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public payable override {
-        require(
-            _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
-        );
-
-        _transfer(from, to, tokenId);
-    }
-
-    /**
-     * @dev See {IERC721-safeTransferFrom}.
-     */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public payable override {
-        safeTransferFrom(from, to, tokenId, "");
-    }
-
-    /**
-     * @dev See {IERC721-safeTransferFrom}.
-     */
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public payable override {
-        require(
-            _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
-        );
-        _safeTransfer(from, to, tokenId, data);
-    }
-
-    function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    )
-        internal
-        virtual
-        override
+    function toss(address to, uint256 tokenId)
+        public
+        payable
         checkToken(tokenId)
         checkFee(tokenId)
         isTransferable(tokenId, to)
     {
         require(
-            ownerOf(tokenId) == from,
+            ownerOf(tokenId) == msg.sender,
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
         require(block.number < _endTime, "The End Times have arrived");
 
-        _beforeTokenTransfer(from, to, tokenId);
-
-        // Clear approvals from the previous owner
-        _approve(address(0), tokenId);
-
         uint256 newTokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
-        _createPartner(to, newTokenId);
+        _safeMint(to, newTokenId);
 
         _levels[newTokenId] = _levels[tokenId];
         _partners[newTokenId] = new uint256[](0);
@@ -167,10 +109,6 @@ contract PonziDAO is ERC721Payable {
         if (_partners[tokenId].length == _levels[tokenId] + 1) {
             levelup(tokenId);
         }
-
-        emit Transfer(from, to, tokenId);
-
-        _afterTokenTransfer(from, to, tokenId);
     }
 
     function levelup(uint256 tokenId) internal {
@@ -217,7 +155,28 @@ contract PonziDAO is ERC721Payable {
         return partners;
     }
 
+    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 amountOfPartners = _partners[tokenId].length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _partners[tokenId][i];
+        }
+        return partners;
+    }
+
     function getLevel(uint256 tokenId) external view returns (uint8) {
+        return _levels[tokenId];
+    }
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8)
+    {
         return _levels[tokenId];
     }
 
@@ -229,7 +188,7 @@ contract PonziDAO is ERC721Payable {
         return _tokenIdCounter.current() - 1;
     }
 
-    function endTimes() external {
+    function endRound() external {
         require(block.number >= _endTime, "The End Times havent arrived yet");
 
         uint256 total = totalSupply();
@@ -240,8 +199,44 @@ contract PonziDAO is ERC721Payable {
             _levels[i] = 0;
         }
 
-        _reset(total);
+        // _reset(total);
 
         _endTime = block.number + (31 days / 2 seconds);
+    }
+
+    function balanceOf(uint32 round, address owner)
+        external
+        view
+        returns (uint256 balance)
+    {
+        require(false, "Unimplemented");
+        return 0;
+    }
+
+    function ownerOf(uint32 round, uint256 tokenId)
+        external
+        view
+        returns (address owner)
+    {
+        require(false, "Unimplemented");
+        return address(0);
+    }
+
+    function getApproved(uint32 round, uint256 tokenId)
+        external
+        view
+        returns (address operator)
+    {
+        require(false, "Unimplemented");
+        return address(0);
+    }
+
+    function isApprovedForAll(
+        uint32 round,
+        address owner,
+        address operator
+    ) external view returns (bool) {
+        require(false, "Unimplemented");
+        return false;
     }
 }
