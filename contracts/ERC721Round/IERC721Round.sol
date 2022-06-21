@@ -4,11 +4,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "./IERC721RoundData.sol";
 
 /**
  * @dev Required interface of an ERC721 compliant contract.
  */
-interface IERC721Levelable is IERC165 {
+interface IERC721Round is IERC165, IERC721RoundData {
     /**
      * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
      */
@@ -32,7 +33,7 @@ interface IERC721Levelable is IERC165 {
     /**
      * @dev Returns the number of tokens in ``owner``'s account. At round
      */
-    function balanceOf(uint32 round, address owner) external view returns (uint256 balance);
+    function balanceOf(uint256 roundId, address owner) external view returns (uint256 balance);
 
 
     /**
@@ -51,7 +52,7 @@ interface IERC721Levelable is IERC165 {
      *
      * - `tokenId` must exist.
      */
-    function ownerOf(uint32 round, uint256 tokenId) external view returns (address owner);
+    function ownerOf(uint256 roundId, uint256 tokenId) external view returns (address owner);
 
 
     /**
@@ -157,7 +158,7 @@ interface IERC721Levelable is IERC165 {
      *
      * - `tokenId` must exist.
      */
-    function getApproved(uint32 round, uint256 tokenId) external view returns (address operator);
+    function getApproved(uint256 roundId, uint256 tokenId) external view returns (address operator);
 
 
     /**
@@ -172,6 +173,6 @@ interface IERC721Levelable is IERC165 {
      *
      * See {setApprovalForAll}
      */
-    function isApprovedForAll(uint32 round, address owner, address operator) external view returns (bool);
+    function isApprovedForAll(uint256 roundId, address owner, address operator) external view returns (bool);
 
 }

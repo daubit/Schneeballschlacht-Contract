@@ -3,10 +3,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./IERC721Levelable.sol";
-import "./IERC721MetadataLevelable.sol";
-import "./IERC721EnumerableSimple.sol";
+import "./IERC721Round.sol";
+import "./IERC721MetadataRound.sol";
+import "./IERC721EnumerableRound.sol";
 import "./SnowballStructs.sol";
+import "../ISchneeballSchlacht.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -21,12 +22,12 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-abstract contract ERC721Group is
+abstract contract ERC721Round is
     Context,
     ERC165,
-    IERC721Levelable,
-    IERC721MetadataLevelable,
-    IERC721EnumerableSimple
+    IERC721Round,
+    IERC721MetadataRound,
+    IERC721EnumerableRound
 {
     using Address for address;
     using Strings for uint256;
@@ -39,6 +40,7 @@ abstract contract ERC721Group is
     string private _symbol;
 
     Counters.Counter private _roundIdCounter;
+    Counters.Counter private _tokenIdCounter;
 
     // Mapping from round ID to Round
     mapping(uint256 => Round) private _rounds;
@@ -67,11 +69,20 @@ abstract contract ERC721Group is
 
     mapping(uint256 => Counters.Counter) private _tokenIdCounters;
 
+    modifier checkToken(uint256 tokenId) {
+        require(
+            tokenId > 0 && tokenId < _tokenIdCounter.current(),
+            "Invalid token ID!"
+        );
+        _;
+    }
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
     constructor(string memory name_, string memory symbol_) {
         _roundIdCounter.increment();
+        _tokenIdCounter.increment();
         _name = name_;
         _symbol = symbol_;
     }
@@ -87,8 +98,8 @@ abstract contract ERC721Group is
         returns (bool)
     {
         return
-            interfaceId == type(IERC721Levelable).interfaceId ||
-            interfaceId == type(IERC721MetadataLevelable).interfaceId ||
+            interfaceId == type(IERC721Round).interfaceId ||
+            interfaceId == type(IERC721MetadataRound).interfaceId ||
             interfaceId == type(IERC721).interfaceId ||
             interfaceId == type(IERC721Metadata).interfaceId ||
             super.supportsInterface(interfaceId);
@@ -108,7 +119,20 @@ abstract contract ERC721Group is
             owner != address(0),
             "ERC721: address zero is not a valid owner"
         );
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
+        return _balances[roundId][owner];
+    }
+
+    function balanceOf(uint256 roundId, address owner)
+        external
+        view
+        virtual
+        returns (uint256)
+    {
+        require(
+            owner != address(0),
+            "ERC721: address zero is not a valid owner"
+        );
         return _balances[roundId][owner];
     }
 
@@ -122,7 +146,17 @@ abstract contract ERC721Group is
         override
         returns (address)
     {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
+        address owner = _owners[roundId][tokenId];
+        require(owner != address(0), "ERC721: invalid token ID");
+        return owner;
+    }
+
+    function ownerOf(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (address)
+    {
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
         return owner;
@@ -149,16 +183,18 @@ abstract contract ERC721Group is
         public
         view
         virtual
-        override
         returns (string memory)
     {
-        _requireMinted(tokenId);
+        return string(abi.encodePacked(_baseURI(), tokenId));
+    }
 
-        string memory baseURI = _baseURI();
-        return
-            bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, tokenId.toString()))
-                : "";
+    function tokenURI(uint256, uint256 tokenId)
+        external
+        view
+        virtual
+        returns (string memory)
+    {
+        return string(abi.encodePacked(_baseURI(), tokenId));
     }
 
     /**
@@ -174,7 +210,7 @@ abstract contract ERC721Group is
      * @dev See {IERC721-approve}.
      */
     function approve(address to, uint256 tokenId) public virtual override {
-        address owner = ERC721Group.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
         require(
@@ -196,7 +232,16 @@ abstract contract ERC721Group is
         returns (address)
     {
         _requireMinted(tokenId);
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
+        return _tokenApprovals[roundId][tokenId];
+    }
+
+    function getApproved(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (address)
+    {
+        _requireMinted(tokenId);
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -221,7 +266,15 @@ abstract contract ERC721Group is
         override
         returns (bool)
     {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
+        return _operatorApprovals[roundId][owner][operator];
+    }
+
+    function isApprovedForAll(
+        uint256 roundId,
+        address owner,
+        address operator
+    ) external view returns (bool) {
         return _operatorApprovals[roundId][owner][operator];
     }
 
@@ -309,7 +362,7 @@ abstract contract ERC721Group is
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _owners[roundId][tokenId] != address(0);
     }
 
@@ -326,7 +379,7 @@ abstract contract ERC721Group is
         virtual
         returns (bool)
     {
-        address owner = ERC721Group.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         return (spender == owner ||
             isApprovedForAll(owner, spender) ||
             getApproved(tokenId) == spender);
@@ -377,11 +430,12 @@ abstract contract ERC721Group is
     function _mint(address to, uint256 tokenId) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
+        _rounds[roundId].totalBalls++;
 
         _addTokenOwner(to, tokenId);
 
@@ -401,8 +455,8 @@ abstract contract ERC721Group is
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address owner = ERC721Group.ownerOf(tokenId);
-        uint256 roundId = _roundIdCounter.current();
+        address owner = ERC721Round.ownerOf(tokenId);
+        uint256 roundId = getRoundId();
 
         _beforeTokenTransfer(owner, address(0), tokenId);
 
@@ -435,11 +489,11 @@ abstract contract ERC721Group is
         uint256 tokenId
     ) internal virtual {
         require(
-            ERC721Group.ownerOf(tokenId) == from,
+            ERC721Round.ownerOf(tokenId) == from,
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(from, to, tokenId);
 
         // Clear approvals from the previous owner
@@ -463,9 +517,9 @@ abstract contract ERC721Group is
      * Emits an {Approval} event.
      */
     function _approve(address to, uint256 tokenId) internal virtual {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _tokenApprovals[roundId][tokenId] = to;
-        emit Approval(ERC721Group.ownerOf(tokenId), to, tokenId);
+        emit Approval(ERC721Round.ownerOf(tokenId), to, tokenId);
     }
 
     /**
@@ -479,7 +533,7 @@ abstract contract ERC721Group is
         bool approved
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
@@ -571,15 +625,65 @@ abstract contract ERC721Group is
         uint256 tokenId
     ) internal virtual {}
 
-    function startRound() external {
+    function totalSupply() public view virtual returns (uint256) {
+        return getTokenId() - 1;
+    }
+
+    function totalSupply(uint256 roundId)
+        public
+        view
+        virtual
+        returns (uint256)
+    {
+        require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
+        if (roundId == getRoundId()) {
+            return getTokenId() - 1;
+        } else {
+            return _rounds[roundId].totalBalls;
+        }
+    }
+
+    function getRoundId() public view returns (uint256) {
+        return _roundIdCounter.current();
+    }
+
+    function incrementRoundId() internal {
+        _roundIdCounter.increment();
+    }
+
+    function getTokenId() internal view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
+    function incrementTokenId() internal {
+        _tokenIdCounter.increment();
+    }
+
+    function getEndHeight() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        return _rounds[roundId].endHeight;
+    }
+
+    function getEndHeight(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].endHeight;
+    }
+
+    function getPayoutPerLevel(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].payoutPerLevel;
+    }
+
+    function startRound() public virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
         Round memory round = Round({
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
-            payout: 0
+            payoutPerLevel: 0,
+            totalPayout: 0,
+            totalBalls: 0,
+            totalThrows: 0
         });
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _rounds[roundId] = round;
     }
 
@@ -611,5 +715,59 @@ abstract contract ERC721Group is
         // This also deletes the contents at the last position of the array
         delete _tokenOwnersIndex[round][tokenId];
         delete _tokenOwners[round][from][lastTokenIndex];
+    }
+
+    function endRound() public virtual {
+        require(
+            block.number >= getEndHeight(),
+            "The end height havent arrived yet"
+        );
+
+        uint256 total = getTokenId() - 1;
+        _tokenIdCounter.reset();
+        incrementTokenId();
+
+        for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
+            emit Transfer(ownerOf(tokenId), address(0), tokenId);
+        }
+        // Create Escrow Contract
+        // Send value to contract
+        // store address
+        // increase roundId
+        incrementRoundId();
+    }
+
+    function proccesspayout() internal {
+
+    }
+
+    function getTokensOfAddress(uint256 round, address addr) public view virtual returns (uint256[] memory) {
+        uint256 amount = balanceOf(addr);
+        uint[] memory ret = new uint[](amount);
+
+        for (uint256 index = 0; index < amount; index++) {
+            ret[index] = _tokenOwners[round][addr][index];
+        }
+
+        return ret;
+    }
+
+    function getTokensOfAddress(address addr) external view virtual returns (uint256[] memory) {
+        return getTokensOfAddress(_roundIdCounter.current(), addr);
+    }
+
+    function getSnowballsOfAddress(uint256 round, address addr) public view virtual returns (Snowball[] memory) {
+        uint256 amount = balanceOf(addr);
+        Snowball[] memory ret = new Snowball[](amount);
+
+        for (uint256 index = 0; index < amount; index++) {
+            ret[index] = _snowballs[round][_tokenOwners[round][addr][index]];
+        }
+
+        return ret;
+    }
+
+    function getSnowballsOfAddress(address addr) external view virtual returns (Snowball[] memory) {
+        return getSnowballsOfAddress(_roundIdCounter.current(), addr);
     }
 }

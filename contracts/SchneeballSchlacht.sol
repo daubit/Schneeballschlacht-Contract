@@ -1,7 +1,6 @@
 pragma solidity 0.8.15;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "./ERC721Levelable/ERC721Levelable.sol";
+import "./ERC721Round/ERC721Round.sol";
 import "./ISchneeballSchlacht.sol";
 
 // TODO: payout
@@ -9,85 +8,146 @@ import "./ISchneeballSchlacht.sol";
 // TODO: refactor transfer to throw func
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
-    using Counters for Counters.Counter;
-
-    Counters.Counter private _tokenIdCounter;
-
-    uint256 private _endTime;
+contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
+    bool private _isLocked;
 
-    // TokenId => Level
-    mapping(uint256 => uint8) private _levels;
+    // Mapping roundId to snowball ID to snowball
+    mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
+    
+    event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
-    // TokenId => sent tokenIds to partners
-    mapping(uint256 => uint256[]) private _partners;
-    mapping(uint32 => RoundData) private _roundData;
-    mapping(address => mapping(uint256 => uint256)) private _tokenOwners;
-    mapping(address => uint256) private _tokenOwnersLength;
-
-    event LevelUp(uint256 indexed tokenId);
-
-    constructor() ERC721Levelable("SchneeballSchlacht", "Schneeball") {
-        _endTime = block.number + (31 days / 2 seconds);
-        _tokenIdCounter.increment();
-    }
-
-    modifier checkToken(uint256 tokenId) {
-        require(tokenId > 0 && tokenId <= totalSupply(), "Invalid token ID!");
-        _;
+    constructor() ERC721Round("SchneeballSchlacht", "Schneeball") {
+        lock();
     }
 
     modifier checkFee(uint256 tokenId) {
         require(
-            msg.value == TRANSFER_FEE * _levels[tokenId],
+            msg.value == TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level,
             "Insufficient fee!"
         );
         _;
     }
 
+    modifier onlyUnlocked() {
+        if (block.number >= getEndHeight()) {
+            lock();
+        }
+        require(!_isLocked, "No round is running!");
+        _;
+    }
+
+    modifier onlyLocked() {
+        require(_isLocked, "Round is still running!");
+        _;
+    }
+
     modifier isTransferable(uint256 tokenId, address to) {
+        uint256 roundId = getRoundId();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         require(
-            _levels[tokenId] != MAX_LEVEL ||
-                _partners[tokenId].length <= _levels[tokenId] + 1,
+            level != MAX_LEVEL || amountOfPartners <= level + 1,
             "Cannot transfer"
         );
-        uint256[] memory partners = _partners[tokenId];
+        uint256[] memory partners = _snowballs[roundId][tokenId].partners;
         for (uint256 index = 0; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
         }
         _;
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "";
-    }
-
     function tokenURI(uint256 tokenId)
         public
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        uint256 roundId = getRoundId();
+        return
+            string(
+                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+            );
+    }
+
+    function tokenURI(uint256 roundId, uint256 tokenId)
+        external
         view
         override
         returns (string memory)
     {
-        return string(abi.encodePacked(_baseURI(), _levels[tokenId]));
+        return
+            string(
+                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+            );
     }
 
-    function mint(address to) public payable {
+    function mint(address to) public payable onlyUnlocked {
         require(msg.value == MINT_FEE, "Insufficient fee!");
-        require(block.number < _endTime, "The End Times have arrived");
-        uint256 tokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
+        uint256 roundId = getRoundId();
+        uint256 tokenId = getTokenId();
+        incrementTokenId();
         _safeMint(to, tokenId);
+        Snowball memory snowball = Snowball({
+            level: 1,
+            partners: new uint256[](0),
+            parentSnowballId: 0
+        });
+        _snowballs[roundId][tokenId] = snowball;
+    }
 
-        _levels[tokenId] = 1;
-        _partners[tokenId] = new uint256[](0);
+    function getPartnerTokenIds(uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 roundId = getRoundId();
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i = 0; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    /**
+     * @dev Returns level from the current round.
+     */
+    function getLevel(uint256 tokenId) external view returns (uint8) {
+        uint256 roundId = getRoundId();
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
+    }
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8)
+    {
+        uint8 level = _snowballs[roundId][tokenId].level;
+        return level;
     }
 
     function toss(address to, uint256 tokenId)
-        public
+        external
         payable
+        onlyUnlocked
         checkToken(tokenId)
         checkFee(tokenId)
         isTransferable(tokenId, to)
@@ -97,38 +157,66 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
-        require(block.number < _endTime, "The End Times have arrived");
 
-        uint256 newTokenId = _tokenIdCounter.current();
-        _tokenIdCounter.increment();
+        uint256 roundId = getRoundId();
+        uint8 level = _snowballs[roundId][tokenId].level;
 
+        uint256 newTokenId = getTokenId();
+        incrementTokenId();
         _safeMint(to, newTokenId);
 
-        _levels[newTokenId] = _levels[tokenId];
-        _partners[newTokenId] = new uint256[](0);
+        _snowballs[roundId][newTokenId] = Snowball({
+            level: level,
+            parentSnowballId: tokenId,
+            partners: new uint256[](0)
+        });
+        _snowballs[roundId][tokenId].partners.push(newTokenId);
 
-        _partners[tokenId].push(newTokenId);
-
-        if (_partners[tokenId].length == _levels[tokenId] + 1) {
+        if (
+            level + 1 < MAX_LEVEL &&
+            _snowballs[roundId][tokenId].partners.length == level + 1
+        ) {
             levelup(tokenId);
+        } else if (
+            level < MAX_LEVEL &&
+            _snowballs[roundId][tokenId].partners.length == level + 1
+        ) {
+            uint256 winnerTokenId = getTokenId();
+            incrementTokenId();
+            _safeMint(to, winnerTokenId);
+            _snowballs[roundId][winnerTokenId] = Snowball({
+                level: 20,
+                parentSnowballId: tokenId,
+                partners: new uint256[](0)
+            });
+            // End Game
+            lock();
         }
     }
 
     function levelup(uint256 tokenId) internal {
-        uint256[] memory partners = new uint256[](
-            _partners[tokenId].length + 1
-        );
-        for (uint256 i = 0; i < _partners[tokenId].length; i++) {
-            partners[i] = _partners[tokenId][i];
+        uint256 roundId = getRoundId();
+        uint256 amountOldPartners = _snowballs[roundId][tokenId]
+            .partners
+            .length;
+        uint256[] memory partners = new uint256[](amountOldPartners + 1);
+        for (uint256 i = 0; i < amountOldPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         partners[partners.length - 1] = tokenId;
 
         uint256 randIndex = randomIndex(partners.length);
         uint256 randToken = partners[randIndex];
-        if (_levels[randToken] < MAX_LEVEL) {
-            _levels[randToken]++;
-            _partners[randToken] = new uint256[](0);
-            emit LevelUp(randToken);
+        uint8 randLevel = _snowballs[roundId][randToken].level;
+        if (randLevel + 1 < MAX_LEVEL) {
+            uint256 upgradedTokenId = getTokenId();
+            incrementTokenId();
+            _snowballs[roundId][upgradedTokenId] = Snowball({
+                level: randLevel + 1,
+                partners: new uint256[](0),
+                parentSnowballId: tokenId
+            });
+            emit LevelUp(roundId, upgradedTokenId);
         }
     }
 
@@ -145,101 +233,46 @@ contract SchneeballSchlacht is ERC721Levelable, ISchneeballSchlacht {
         return uint256(hashValue) % length;
     }
 
-    function getPartnerTokenIds(uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
+    function startRound()
+        public
+        override(ERC721Round, ISchneeballSchlacht)
+        onlyLocked
     {
-        uint256 amountOfPartners = _partners[tokenId].length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
-            partners[i] = _partners[tokenId][i];
-        }
-        return partners;
+        unlock();
+        ERC721Round.startRound();
     }
 
-    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
+    function endRound()
+        public
+        override(ERC721Round, ISchneeballSchlacht)
+        onlyLocked
     {
-        uint256 amountOfPartners = _partners[tokenId].length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
-            partners[i] = _partners[tokenId][i];
-        }
-        return partners;
+        ERC721Round.endRound();
     }
 
-    function getLevel(uint256 tokenId) external view returns (uint8) {
-        return _levels[tokenId];
-    }
-
-    function getLevel(uint256 roundId, uint256 tokenId)
-        external
+    function totalSupply()
+        public
         view
-        returns (uint8)
+        override(ERC721Round, ISchneeballSchlacht)
+        returns (uint256)
     {
-        return _levels[tokenId];
+        return ERC721Round.totalSupply();
     }
 
-    function getEndTime() external view returns (uint256) {
-        return _endTime;
-    }
-
-    function totalSupply() public view returns (uint256) {
-        return _tokenIdCounter.current() - 1;
-    }
-
-    function endRound() external {
-        require(block.number >= _endTime, "The End Times havent arrived yet");
-
-        uint256 total = totalSupply();
-        _tokenIdCounter.reset();
-
-        for (uint256 i = 1; i < total; i++) {
-            _partners[i] = new uint256[](0);
-            _levels[i] = 0;
-        }
-
-        // _reset(total);
-
-        _endTime = block.number + (31 days / 2 seconds);
-    }
-
-    function balanceOf(uint32 round, address owner)
-        external
+    function totalSupply(uint256 roundId)
+        public
         view
-        returns (uint256 balance)
+        override(ERC721Round, ISchneeballSchlacht)
+        returns (uint256)
     {
-        require(false, "Unimplemented");
-        return 0;
+        return ERC721Round.totalSupply(roundId);
     }
 
-    function ownerOf(uint32 round, uint256 tokenId)
-        external
-        view
-        returns (address owner)
-    {
-        require(false, "Unimplemented");
-        return address(0);
+    function lock() internal {
+        _isLocked = true;
     }
 
-    function getApproved(uint32 round, uint256 tokenId)
-        external
-        view
-        returns (address operator)
-    {
-        require(false, "Unimplemented");
-        return address(0);
-    }
-
-    function isApprovedForAll(
-        uint32 round,
-        address owner,
-        address operator
-    ) external view returns (bool) {
-        require(false, "Unimplemented");
-        return false;
+    function unlock() internal {
+        _isLocked = false;
     }
 }

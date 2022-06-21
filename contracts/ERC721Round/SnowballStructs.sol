@@ -9,6 +9,7 @@ struct Round {
     uint256 totalThrows;
     uint256 totalBalls;
 }
+
 struct Snowball {
     uint8 level;
     uint256[] partners;

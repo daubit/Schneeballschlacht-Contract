@@ -24,12 +24,12 @@ contract Escrow is Ownable {
     }
 
     function depositsOf(address payee) public view returns (uint256) {
-        RoundData memory round = _schneeballschlacht.getRoundData(_round);
+        uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
         // TODO: use Schneeball struct to save the getLevel calls
         uint256[] memory tokens = _schneeballschlacht.getTokensOfAddress(_round, payee);
         uint256 payout = 0;
         for (uint256 index = 0; index < tokens.length; index++) {
-            payout += _schneeballschlacht.getLevel(_round, tokens[index]) * round.PayoutPerLevel; 
+            payout += _schneeballschlacht.getLevel(_round, tokens[index]) * payoutPerLevel; 
         }
         return payout;
     }
