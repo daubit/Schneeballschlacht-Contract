@@ -24,6 +24,8 @@ interface ISchneeballSchlacht {
 
     function totalSupply() external view returns (uint256);
 
+    function totalSupply(uint256 roundId) external view returns (uint256);
+
     function startRound() external;
 
     function endRound() external;
