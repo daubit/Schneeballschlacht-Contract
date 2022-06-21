@@ -23,9 +23,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     }
 
     modifier checkFee(uint256 tokenId) {
-        uint256 roundId = getRoundId();
-        uint8 level = _snowballs[roundId][tokenId].level;
-        require(msg.value == TRANSFER_FEE * level, "Insufficient fee!");
+        require(
+            msg.value == TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level,
+            "Insufficient fee!"
+        );
         _;
     }
 
@@ -137,8 +138,8 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         public
         payable
         checkDeadline
-        checkFee(tokenId)
         checkToken(tokenId)
+        checkFee(tokenId)
         isTransferable(tokenId, to)
     {
         require(
@@ -149,7 +150,6 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         uint256 roundId = getRoundId();
         uint256 newTokenId = getTokenId();
         incrementTokenId();
-
         _safeMint(to, newTokenId);
 
         _snowballs[roundId][newTokenId] = Snowball({
@@ -204,5 +204,22 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             )
         );
         return uint256(hashValue) % length;
+    }
+
+    function startRound() public override(ERC721Round, ISchneeballSchlacht) {
+        ERC721Round.startRound();
+    }
+
+    function endRound() public override(ERC721Round, ISchneeballSchlacht) {
+        ERC721Round.endRound();
+    }
+
+    function totalSupply()
+        public
+        view
+        override(ERC721Round, ISchneeballSchlacht)
+        returns (uint256)
+    {
+        return ERC721Round.totalSupply();
     }
 }

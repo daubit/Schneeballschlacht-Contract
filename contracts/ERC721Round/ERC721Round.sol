@@ -4,7 +4,7 @@
 pragma solidity ^0.8.0;
 
 import "./IERC721Round.sol";
-import "./IERC721MetadataLevelable.sol";
+import "./IERC721MetadataRound.sol";
 import "../ISchneeballSchlacht.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
@@ -72,9 +72,10 @@ abstract contract ERC721Round is
     }
 
     modifier checkDeadline() {
-        uint256 roundId = getRoundId();
-        uint256 endHeight = _rounds[roundId].endHeight;
-        require(block.number < endHeight, "Deadline has been reached!");
+        require(
+            block.number < _rounds[getRoundId()].endHeight,
+            "Deadline has been reached!"
+        );
         _;
     }
 
@@ -189,7 +190,7 @@ abstract contract ERC721Round is
         return string(abi.encodePacked(_baseURI(), tokenId));
     }
 
-    function tokenURI(uint256 _roundId, uint256 tokenId)
+    function tokenURI(uint256, uint256 tokenId)
         external
         view
         virtual
@@ -619,7 +620,7 @@ abstract contract ERC721Round is
         uint256 tokenId
     ) internal virtual {}
 
-    function totalSupply() external view virtual returns (uint256) {
+    function totalSupply() public view virtual returns (uint256) {
         return _tokenIdCounter.current();
     }
 
@@ -662,7 +663,7 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
-    function startRound() external virtual {
+    function startRound() public virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
         Round memory round = Round({
             startHeight: block.number,
@@ -675,7 +676,7 @@ abstract contract ERC721Round is
         _rounds[roundId] = round;
     }
 
-    function endRound() external virtual {
+    function endRound() public virtual {
         require(
             block.number >= getEndHeight(),
             "The end height havent arrived yet"
