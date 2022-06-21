@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 /**
  * @dev Required interface of an ERC721 compliant contract.
  */
-interface IERC721Levelable is IERC165 {
+interface IERC721Round is IERC165 {
     /**
      * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
      */

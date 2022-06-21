@@ -20,19 +20,15 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-abstract contract ERC721Group is
+abstract contract ERC721Round is
     Context,
     ERC165,
     IERC721Round,
-    IERC721MetadataLevelable
+    IERC721MetadataRound
 {
     using Address for address;
     using Strings for uint256;
     using Counters for Counters.Counter;
-
-    uint8 private constant MAX_LEVEL = 20;
-    uint256 private constant MINT_FEE = 0.1 ether;
-    uint256 private constant TRANSFER_FEE = 0.001 ether;
 
     // Token name
     string private _name;
@@ -64,15 +60,19 @@ abstract contract ERC721Group is
         uint256 payout;
         uint256 startHeight;
         uint256 endHeight;
+        uint256 totalSupply;
     }
 
     modifier checkToken(uint256 tokenId) {
-        require(tokenId > 0 && tokenId <= totalSupply(), "Invalid token ID!");
+        require(
+            tokenId > 0 && tokenId <= _tokenIdCounter.current(),
+            "Invalid token ID!"
+        );
         _;
     }
 
     modifier checkDeadline() {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         uint256 endHeight = _rounds[roundId].endHeight;
         require(block.number < endHeight, "Deadline has been reached!");
         _;
@@ -83,6 +83,7 @@ abstract contract ERC721Group is
      */
     constructor(string memory name_, string memory symbol_) {
         _roundIdCounter.increment();
+        _tokenIdCounter.increment();
         _name = name_;
         _symbol = symbol_;
     }
@@ -98,8 +99,8 @@ abstract contract ERC721Group is
         returns (bool)
     {
         return
-            interfaceId == type(IERC721Levelable).interfaceId ||
-            interfaceId == type(IERC721MetadataLevelable).interfaceId ||
+            interfaceId == type(IERC721Round).interfaceId ||
+            interfaceId == type(IERC721MetadataRound).interfaceId ||
             interfaceId == type(IERC721).interfaceId ||
             interfaceId == type(IERC721Metadata).interfaceId ||
             super.supportsInterface(interfaceId);
@@ -119,13 +120,14 @@ abstract contract ERC721Group is
             owner != address(0),
             "ERC721: address zero is not a valid owner"
         );
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _balances[roundId][owner];
     }
 
-    function balanceOf(uint32 roundId, address owner)
+    function balanceOf(uint256 roundId, address owner)
         external
         view
+        virtual
         returns (uint256)
     {
         require(
@@ -145,7 +147,7 @@ abstract contract ERC721Group is
         override
         returns (address)
     {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
         return owner;
@@ -184,22 +186,16 @@ abstract contract ERC721Group is
         virtual
         returns (string memory)
     {
-        uint256 roundId = _roundIdCounter.current();
-        return
-            string(
-                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
-            );
+        return string(abi.encodePacked(_baseURI(), tokenId));
     }
 
-    function tokenURI(uint256 roundId, uint256 tokenId)
+    function tokenURI(uint256 _roundId, uint256 tokenId)
         external
         view
+        virtual
         returns (string memory)
     {
-        return
-            string(
-                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
-            );
+        return string(abi.encodePacked(_baseURI(), tokenId));
     }
 
     /**
@@ -215,7 +211,7 @@ abstract contract ERC721Group is
      * @dev See {IERC721-approve}.
      */
     function approve(address to, uint256 tokenId) public virtual override {
-        address owner = ERC721Group.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
         require(
@@ -237,7 +233,7 @@ abstract contract ERC721Group is
         returns (address)
     {
         _requireMinted(tokenId);
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -271,12 +267,12 @@ abstract contract ERC721Group is
         override
         returns (bool)
     {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _operatorApprovals[roundId][owner][operator];
     }
 
     function isApprovedForAll(
-        uint32 roundId,
+        uint256 roundId,
         address owner,
         address operator
     ) external view returns (bool) {
@@ -367,7 +363,7 @@ abstract contract ERC721Group is
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _owners[roundId][tokenId] != address(0);
     }
 
@@ -384,7 +380,7 @@ abstract contract ERC721Group is
         virtual
         returns (bool)
     {
-        address owner = ERC721Group.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         return (spender == owner ||
             isApprovedForAll(owner, spender) ||
             getApproved(tokenId) == spender);
@@ -435,7 +431,7 @@ abstract contract ERC721Group is
     function _mint(address to, uint256 tokenId) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(address(0), to, tokenId);
 
         _balances[roundId][to] += 1;
@@ -457,8 +453,8 @@ abstract contract ERC721Group is
      * Emits a {Transfer} event.
      */
     function _burn(uint256 tokenId) internal virtual {
-        address owner = ERC721Group.ownerOf(tokenId);
-        uint256 roundId = _roundIdCounter.current();
+        address owner = ERC721Round.ownerOf(tokenId);
+        uint256 roundId = getRoundId();
 
         _beforeTokenTransfer(owner, address(0), tokenId);
 
@@ -490,11 +486,11 @@ abstract contract ERC721Group is
         uint256 tokenId
     ) internal virtual {
         require(
-            ERC721Group.ownerOf(tokenId) == from,
+            ERC721Round.ownerOf(tokenId) == from,
             "ERC721: transfer from incorrect owner"
         );
         require(to != address(0), "ERC721: transfer to the zero address");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(from, to, tokenId);
 
         // Clear approvals from the previous owner
@@ -515,9 +511,9 @@ abstract contract ERC721Group is
      * Emits an {Approval} event.
      */
     function _approve(address to, uint256 tokenId) internal virtual {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _tokenApprovals[roundId][tokenId] = to;
-        emit Approval(ERC721Group.ownerOf(tokenId), to, tokenId);
+        emit Approval(ERC721Round.ownerOf(tokenId), to, tokenId);
     }
 
     /**
@@ -531,7 +527,7 @@ abstract contract ERC721Group is
         bool approved
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
@@ -623,12 +619,42 @@ abstract contract ERC721Group is
         uint256 tokenId
     ) internal virtual {}
 
-    function totalSupply() public view returns (uint256) {
-        return _tokenIdCounter.current() - 1;
+    function totalSupply() external view virtual returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
+    function totalSupply(uint256 roundId)
+        public
+        view
+        virtual
+        returns (uint256)
+    {
+        require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
+        if (roundId == getRoundId()) {
+            return _tokenIdCounter.current();
+        } else {
+            return _rounds[roundId].totalSupply;
+        }
+    }
+
+    function getRoundId() internal view returns (uint256) {
+        return _roundIdCounter.current();
+    }
+
+    function incrementRoundId() internal {
+        _roundIdCounter.increment();
+    }
+
+    function getTokenId() internal view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
+    function incrementTokenId() internal {
+        _tokenIdCounter.increment();
     }
 
     function getEndHeight() public view returns (uint256) {
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         return _rounds[roundId].endHeight;
     }
 
@@ -636,25 +662,26 @@ abstract contract ERC721Group is
         return _rounds[roundId].endHeight;
     }
 
-    function startRound() external {
+    function startRound() external virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
         Round memory round = Round({
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
-            payout: 0
+            payout: 0,
+            totalSupply: 0
         });
-        uint256 roundId = _roundIdCounter.current();
+        uint256 roundId = getRoundId();
         _rounds[roundId] = round;
     }
 
-    function endRound() external {
+    function endRound() external virtual {
         require(
             block.number >= getEndHeight(),
             "The end height havent arrived yet"
         );
 
-        uint256 total = totalSupply();
+        uint256 total = _tokenIdCounter.current();
         _tokenIdCounter.reset();
 
         // for (uint256 i = 1; i < total; i++) {
