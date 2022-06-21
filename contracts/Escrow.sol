@@ -16,7 +16,7 @@ contract Escrow is Ownable {
     uint32 private _round;
     ISchneeballSchlacht private _schneeballschlacht;
 
-    mapping(address => bool) private _withdrawn;
+    mapping(address => bool) private _hasDeposit;
 
     constructor(uint32 round, ISchneeballSchlacht schneeballschlacht) {
         _round = round;
@@ -24,20 +24,23 @@ contract Escrow is Ownable {
     }
 
     function depositsOf(address payee) public view returns (uint256) {
-        uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
-        // TODO: use Schneeball struct to save the getLevel calls
-        uint256[] memory tokens = _schneeballschlacht.getTokensOfAddress(_round, payee);
-        uint256 payout = 0;
-        for (uint256 index = 0; index < tokens.length; index++) {
-            payout += _schneeballschlacht.getLevel(_round, tokens[index]) * payoutPerLevel; 
+        if(_hasDeposit[payee]) {
+            uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
+            Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(_round, payee);
+            uint256 payout = 0;
+            for (uint256 index = 0; index < tokens.length; index++) {
+                payout += tokens[index].level * payoutPerLevel; 
+            }
+            return payout;
+        } else {
+            return 0;
         }
-        return payout;
     }
 
     function withdraw(address payable payee) public virtual onlyOwner {
-        require(_withdrawn[payee] == false, "Deposit already withdrawn");
+        require(_hasDeposit[payee] == true, "Deposit already withdrawn");
 
-        _withdrawn[payee] = true;
+        _hasDeposit[payee] = false;
         uint256 payment = depositsOf(payee);
         require(payment > 0, "No Deposit");
         payee.sendValue(payment);
