@@ -65,16 +65,8 @@ abstract contract ERC721Round is
 
     modifier checkToken(uint256 tokenId) {
         require(
-            tokenId > 0 && tokenId <= _tokenIdCounter.current(),
+            tokenId > 0 && tokenId < _tokenIdCounter.current(),
             "Invalid token ID!"
-        );
-        _;
-    }
-
-    modifier checkDeadline() {
-        require(
-            block.number < _rounds[getRoundId()].endHeight,
-            "Deadline has been reached!"
         );
         _;
     }
@@ -622,7 +614,7 @@ abstract contract ERC721Round is
     ) internal virtual {}
 
     function totalSupply() public view virtual returns (uint256) {
-        return _tokenIdCounter.current();
+        return getTokenId() - 1;
     }
 
     function totalSupply(uint256 roundId)
@@ -633,7 +625,7 @@ abstract contract ERC721Round is
     {
         require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
         if (roundId == getRoundId()) {
-            return _tokenIdCounter.current();
+            return getTokenId() - 1;
         } else {
             return _rounds[roundId].totalSupply;
         }
@@ -683,16 +675,22 @@ abstract contract ERC721Round is
             "The end height havent arrived yet"
         );
 
-        uint256 total = _tokenIdCounter.current();
+        uint256 total = getTokenId() - 1;
         _tokenIdCounter.reset();
+        incrementTokenId();
 
-        // for (uint256 i = 1; i < total; i++) {
-        //     _partners[i] = new uint256[](0);
-        //     _levels[i] = 0;
-        // }
+        for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
+            emit Transfer(ownerOf(tokenId), address(0), tokenId);
+        }
+        // Create Escrow Contract
+        // Send value to contract
+        // store address
+        // increase roundId
+        incrementRoundId();
+    }
 
-        // _reset(total);
-
-        // _endTime = block.number + (31 days / 2 seconds);
+    function addPayment(uint256 amount) internal {
+        uint256 roundId = getRoundId();
+        _rounds[roundId].totalSupply += amount;
     }
 }
