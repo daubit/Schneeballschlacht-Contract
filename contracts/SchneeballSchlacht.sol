@@ -205,15 +205,4 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         );
         return uint256(hashValue) % length;
     }
-
-    function startRound() external override(ERC721Round, ISchneeballSchlacht) {}
-
-    function endRound() external override(ERC721Round, ISchneeballSchlacht) {}
-
-    function totalSupply()
-        external
-        view
-        override(ERC721Round, ISchneeballSchlacht)
-        returns (uint256)
-    {}
 }
