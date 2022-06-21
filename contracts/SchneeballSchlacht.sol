@@ -149,21 +149,35 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         require(to != address(0), "ERC721: transfer to the zero address");
         uint256 roundId = getRoundId();
         uint256 newTokenId = getTokenId();
+        uint8 level = _snowballs[roundId][tokenId].level;
         incrementTokenId();
         _safeMint(to, newTokenId);
 
         _snowballs[roundId][newTokenId] = Snowball({
-            level: _snowballs[roundId][tokenId].level,
+            level: level,
             parentSnowballId: tokenId,
             partners: new uint256[](0)
         });
         _snowballs[roundId][tokenId].partners.push(newTokenId);
 
         if (
-            _snowballs[roundId][tokenId].partners.length ==
-            _snowballs[roundId][tokenId].level + 1
+            level + 1 < MAX_LEVEL &&
+            _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
             levelup(tokenId);
+        } else if (
+            level < MAX_LEVEL &&
+            _snowballs[roundId][tokenId].partners.length == level + 1
+        ) {
+            uint256 winnerTokenId = getTokenId();
+            incrementTokenId();
+            _safeMint(to, winnerTokenId);
+            _snowballs[roundId][winnerTokenId] = Snowball({
+                level: 20,
+                parentSnowballId: tokenId,
+                partners: new uint256[](0)
+            });
+            // End Game
         }
     }
 
@@ -181,9 +195,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
         uint256 randIndex = randomIndex(partners.length);
         uint256 randToken = partners[randIndex];
-        if (_snowballs[roundId][randToken].level < MAX_LEVEL) {
+        uint8 randLevel = _snowballs[roundId][randToken].level;
+        if (randLevel + 1 < MAX_LEVEL) {
             Snowball memory upgradedSnowball = Snowball({
-                level: _snowballs[roundId][randToken].level++,
+                level: randLevel + 1,
                 partners: new uint256[](0),
                 parentSnowballId: _snowballs[roundId][randToken]
                     .parentSnowballId
@@ -221,5 +236,14 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         returns (uint256)
     {
         return ERC721Round.totalSupply();
+    }
+
+    function totalSupply(uint256 roundId)
+        public
+        view
+        override(ERC721Round, ISchneeballSchlacht)
+        returns (uint256)
+    {
+        return ERC721Round.totalSupply(roundId);
     }
 }
