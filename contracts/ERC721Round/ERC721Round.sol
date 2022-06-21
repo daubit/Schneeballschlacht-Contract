@@ -437,6 +437,7 @@ abstract contract ERC721Round is
 
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
+        _rounds[roundId].totalSupply++;
 
         emit Transfer(address(0), to, tokenId);
 
