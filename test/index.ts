@@ -12,16 +12,16 @@ describe("SchneeballSchlacht", async () => {
   let schneeball: Contract;
   // eslint-disable-next-line no-unused-vars
   let users: SignerWithAddress[];
-  before(async () => {
-    // Setting up accounts
-    users = await ethers.getSigners();
-
-    // Deploy SchneeballSchlacht
-    const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
-    schneeball = await Schneeball.deploy();
-    await schneeball.deployed();
-  });
   describe("Contract", () => {
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy SchneeballSchlacht
+      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      schneeball = await Schneeball.deploy();
+      await schneeball.deployed();
+    });
     it("Name is correct", async () => {
       expect(await schneeball.name()).to.be.eq("SchneeballSchlacht");
     });
@@ -48,16 +48,17 @@ describe("SchneeballSchlacht", async () => {
       });
     });
   });
-  before(async () => {
-    // Setting up accounts
-    users = await ethers.getSigners();
 
-    // Deploy SchneeballSchlacht
-    const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
-    schneeball = await Schneeball.deploy();
-    await schneeball.deployed();
-  });
   describe("Simple mint and toss flow", () => {
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy SchneeballSchlacht
+      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      schneeball = await Schneeball.deploy();
+      await schneeball.deployed();
+    });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
@@ -96,6 +97,48 @@ describe("SchneeballSchlacht", async () => {
       );
       expect(Number(balance)).to.equal(1);
       balance = await schneeball.functions["balanceOf(address)"](userAddress);
+      expect(Number(balance)).to.equal(1);
+    });
+  });
+
+  describe("Simple first upgrade flow", () => {
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy SchneeballSchlacht
+      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      schneeball = await Schneeball.deploy();
+      await schneeball.deployed();
+    });
+    it("can init", async () => {
+      const startTx = await schneeball.startRound();
+      await startTx.wait();
+      const userAddress = users[0].address;
+      const mintTx = await schneeball.mint(userAddress, { value: MINT_FEE });
+      await mintTx.wait();
+    });
+    it("can toss successfully", async () => {
+      const partner1Address = users[1].address;
+      const partner2Address = users[2].address;
+      let tossTx;
+      tossTx = await schneeball.connect(users[0]).toss(partner1Address, 1, {
+        value: TRANSFER_FEE(1),
+      });
+      await tossTx.wait();
+      let balance;
+      balance = await schneeball.functions["balanceOf(address)"](
+        partner1Address
+      );
+      expect(Number(balance)).to.equal(1);
+
+      tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
+        value: TRANSFER_FEE(1),
+      });
+      await tossTx.wait();
+      balance = await schneeball.functions["balanceOf(address)"](
+        partner2Address
+      );
       expect(Number(balance)).to.equal(1);
     });
   });
