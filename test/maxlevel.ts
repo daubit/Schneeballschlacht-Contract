@@ -11,7 +11,7 @@ import { parseEther } from "ethers/lib/utils";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
 
-const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toString());
+const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
 const gasUsedPerLevel: { [level: number]: any[] } = {};
 const errors: any = [];
 
@@ -44,15 +44,11 @@ async function main() {
 
   console.log("Contract deployed!");
   for (let level = 1; level < 20; level++) {
-    console.log(
-      `At Level ${level}\nAddress ${currentAddress} is tossing TokenId ${currentToken}`
-    );
-    const next = iterator(addresses.indexOf(currentAddress) + 1);
+    const next = iterator(addresses.indexOf(currentAddress));
     // Transfering Token
     for (let i = 0; i <= level; i++) {
       const nextIndex = next();
       try {
-        console.log(`Tossing to ${addresses[nextIndex]}`);
         const transferTx = await schneeball
           .connect(await ethers.getSigner(currentAddress))
           .toss(addresses[nextIndex], currentToken, {
@@ -69,18 +65,16 @@ async function main() {
           gasUsedPerLevel[level] = [transferTx];
         }
       } catch (e) {
-        console.log("Oh no, an eror occurred!");
+        console.log("Oh no, an error occurred!");
         errors.push(e);
       }
     }
     const total = Number(await schneeball.functions["totalSupply()"]());
     // Lookup upgraded Token
-    console.log(`Current supply: ${total}`);
     for (let i = currentToken; i <= total; i++) {
       const nextLevel = Number(
         await schneeball.functions["getLevel(uint256)"](i)
       );
-      console.log(`Looking up level for token ${i}`);
       if (level + 1 === nextLevel) {
         currentToken = i;
         currentAddress = (
@@ -99,9 +93,7 @@ async function main() {
   const total = Number(await schneeball.functions["totalSupply()"]());
   const addressData: { [address: string]: any[] } = {};
   for (let i = 1; i <= total; i++) {
-    const owner = (
-      await schneeball.functions["ownerOf(uint256)"](currentToken)
-    )[0];
+    const owner = (await schneeball.functions["ownerOf(uint256)"](i))[0];
     const level = Number(await schneeball.functions["getLevel(uint256)"](i));
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
