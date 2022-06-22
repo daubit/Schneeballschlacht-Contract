@@ -36,12 +36,12 @@ contract Escrow is Ownable {
         }
     }
 
-    function deposit() public payable virtual {
+    function deposit() external payable virtual {
         // noop to deposit funds
     }
 
     // TODO: do we need onlyowner here?
-    function withdraw(address payable payee) public virtual onlyOwner {
+    function withdraw(address payable payee) external onlyOwner {
         require(_hasDeposit[payee] == true, "Deposit already withdrawn");
 
         _hasDeposit[payee] = false;

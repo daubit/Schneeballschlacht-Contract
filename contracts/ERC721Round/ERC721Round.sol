@@ -8,7 +8,6 @@ import "./IERC721MetadataRound.sol";
 import "./IERC721EnumerableRound.sol";
 import "./SnowballStructs.sol";
 import "../ISchneeballSchlacht.sol";
-import "../Escrow.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -716,8 +715,6 @@ abstract contract ERC721Round is
         // store address
         // increase roundId
     }
-
-    function proccesspayout() internal virtual { }
 
     function getTokensOfAddress(uint256 round, address addr) public view virtual returns (uint256[] memory) {
         uint256 amount = balanceOf(round, addr);

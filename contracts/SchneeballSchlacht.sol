@@ -2,13 +2,14 @@ pragma solidity 0.8.15;
 
 import "./ERC721Round/ERC721Round.sol";
 import "./ISchneeballSchlacht.sol";
+import "./PullPaymentRound.sol";
 
 // TODO: payout
 // TODO: maybe event
 // TODO: refactor transfer to throw func
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
+contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Round {
     uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
@@ -294,12 +295,9 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         return getSnowballsOfAddress(getRoundId(), addr);
     }
 
-    mapping (uint256 => Escrow) _escrow;
-
-    function proccesspayout() internal override {
-        uint256 round = getRoundId();
+    function proccesspayout(uint256 round) internal {
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
-        _escrow[round] = escrow;
+        addEscrow(round, escrow);
 
         uint256 totalLevels = 0;
 
