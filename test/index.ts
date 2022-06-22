@@ -73,11 +73,17 @@ describe("SchneeballSchlacht", async () => {
       const balance = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance)).to.equal(1);
-      const level = await schneeball.functions["getLevel(uint256)"](1);
+      expect(Number(balance)).to.equal(2);
+
+      // Genesis snowball
+      const genesislevel = await schneeball.functions["getLevel(uint256)"](1);
+      expect(Number(genesislevel)).to.equal(1);
+
+      // Minted snowball
+      const level = await schneeball.functions["getLevel(uint256)"](2);
       expect(Number(level)).to.equal(1);
       const totalSupply = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply)).to.equal(1);
+      expect(Number(totalSupply)).to.equal(2);
     });
     it("can toss successfully", async () => {
       const userAddress = users[0].address;
@@ -95,7 +101,7 @@ describe("SchneeballSchlacht", async () => {
       );
       expect(Number(balance)).to.equal(1);
       balance = await schneeball.functions["balanceOf(address)"](userAddress);
-      expect(Number(balance)).to.equal(1);
+      expect(Number(balance)).to.equal(2);
 
       tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
         value: TRANSFER_FEE(1),
@@ -107,8 +113,14 @@ describe("SchneeballSchlacht", async () => {
       expect(Number(balance)).to.equal(1);
     });
     it("has an successful upgrade", async () => {
-      const level = (await schneeball.functions["getLevel(uint256)"](4))[0];
+      const level = (await schneeball.functions["getLevel(uint256)"](5))[0];
       expect(level).to.be.equal(2);
+    });
+    it("Contract has correct amount of payout", async () => {
+      const balance = await ethers.provider.getBalance(schneeball.address);
+      expect(String(balance)).to.be.eq(
+        MINT_FEE.add(TRANSFER_FEE(1).add(TRANSFER_FEE(1))).toString()
+      );
     });
   });
 });

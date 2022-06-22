@@ -1,3 +1,5 @@
+/* eslint-disable object-shorthand */
+/* eslint-disable no-unused-vars */
 /* eslint-disable node/no-unsupported-features/es-builtins */
 /* eslint-disable node/no-missing-import */
 // We require the Hardhat Runtime Environment explicitly here. This is optional
@@ -9,9 +11,9 @@ import { parseEther } from "ethers/lib/utils";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
 
-const MINT_FEE = parseEther("0.1");
 const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toString());
 const gasUsedPerLevel: { [level: number]: any[] } = {};
+const errors: any = [];
 
 // TODO:
 //	Catch error
@@ -35,24 +37,30 @@ async function main() {
   let currentAddress = addresses[0];
   let currentToken = 1;
   console.log(`Amount of wallets: ${wallets.length}`);
-  const Ponzi = await ethers.getContractFactory("PonziDAO");
-  const ponzi = await Ponzi.deploy();
-  await ponzi.mint(currentAddress, {
-    value: MINT_FEE,
-  });
-  for (let level = 1; level <= 11; level++) {
+  const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+  const schneeball = await Schneeball.deploy();
+  const startTx = await schneeball.startRound();
+  await startTx.wait();
+
+  console.log("Contract deployed!");
+  for (let level = 1; level < 20; level++) {
     console.log(
-      `At Level ${level}\nAddress ${currentAddress} is transfering TokenId ${currentToken}`
+      `At Level ${level}\nAddress ${currentAddress} is tossing TokenId ${currentToken}`
     );
     const next = iterator(addresses.indexOf(currentAddress) + 1);
     // Transfering Token
-    for (let i = 0; i <= level + 1; i++) {
+    for (let i = 0; i <= level; i++) {
       const nextIndex = next();
       try {
-        const transferTx = await ponzi
+        console.log(`Tossing to ${addresses[nextIndex]}`);
+        const transferTx = await schneeball
           .connect(await ethers.getSigner(currentAddress))
-          .transferFrom(currentAddress, addresses[nextIndex], currentToken, {
-            value: TRANSFER_FEE(await ponzi.getLevel(currentToken)),
+          .toss(addresses[nextIndex], currentToken, {
+            value: TRANSFER_FEE(
+              (
+                await schneeball.functions["getLevel(uint256)"](currentToken)
+              )[0]
+            ),
           });
         await transferTx.wait();
         if (gasUsedPerLevel[level]) {
@@ -61,16 +69,23 @@ async function main() {
           gasUsedPerLevel[level] = [transferTx];
         }
       } catch (e) {
-        console.log({ e });
+        console.log("Oh no, an eror occurred!");
+        errors.push(e);
       }
     }
-    const total = await ponzi.totalSupply();
+    const total = Number(await schneeball.functions["totalSupply()"]());
     // Lookup upgraded Token
-    for (let i = currentToken; i <= total.toNumber(); i++) {
-      const nextLevel = await ponzi.getLevel(i);
+    console.log(`Current supply: ${total}`);
+    for (let i = currentToken; i <= total; i++) {
+      const nextLevel = Number(
+        await schneeball.functions["getLevel(uint256)"](i)
+      );
+      console.log(`Looking up level for token ${i}`);
       if (level + 1 === nextLevel) {
         currentToken = i;
-        currentAddress = await ponzi.ownerOf(currentToken);
+        currentAddress = (
+          await schneeball.functions["ownerOf(uint256)"](currentToken)
+        )[0];
         console.log(
           `TokenId ${currentToken} of ${currentAddress} has upgraded to ${nextLevel}!`
         );
@@ -78,12 +93,16 @@ async function main() {
       }
     }
   }
-  writeFileSync("log.json", JSON.stringify(gasUsedPerLevel, null, 2));
-  const total = (await ponzi.totalSupply()).toNumber();
+  writeFileSync("data/log.json", JSON.stringify(gasUsedPerLevel, null, 2));
+  writeFileSync("data/error.json", JSON.stringify(errors, null, 2));
+
+  const total = Number(await schneeball.functions["totalSupply()"]());
   const addressData: { [address: string]: any[] } = {};
   for (let i = 1; i <= total; i++) {
-    const owner = await ponzi.ownerOf(i);
-    const level = await ponzi.getLevel(i);
+    const owner = (
+      await schneeball.functions["ownerOf(uint256)"](currentToken)
+    )[0];
+    const level = Number(await schneeball.functions["getLevel(uint256)"](i));
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
       addressData[owner].push(entry);
@@ -91,7 +110,7 @@ async function main() {
       addressData[owner] = [entry];
     }
   }
-  writeFileSync("tokens.json", JSON.stringify(addressData, null, 2));
+  writeFileSync("data/tokens.json", JSON.stringify(addressData, null, 2));
 }
 
 // We recommend this pattern to be able to use async/await everywhere
