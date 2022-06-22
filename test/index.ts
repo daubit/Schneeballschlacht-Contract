@@ -80,6 +80,9 @@ describe("SchneeballSchlacht", async () => {
       const currentHeight = await ethers.provider.getBlockNumber();
       expect(Number(endHeight)).to.be.be.greaterThan(Number(currentHeight));
     });
+    it("CANNOT repeat startRound", async () => {
+      expect(schneeball.startRound()).to.be.reverted;
+    });
     it("CANNOT end round", async () => {
       expect(schneeball.endRound()).to.be.reverted;
     });

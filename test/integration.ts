@@ -12,7 +12,6 @@ import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
 
 const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
-const gasUsedPerLevel: { [level: number]: any[] } = {};
 const errors: any = [];
 
 // TODO:
@@ -59,11 +58,6 @@ async function main() {
             ),
           });
         await transferTx.wait();
-        if (gasUsedPerLevel[level]) {
-          gasUsedPerLevel[level].push(transferTx);
-        } else {
-          gasUsedPerLevel[level] = [transferTx];
-        }
       } catch (e) {
         console.log("Oh no, an error occurred!");
         errors.push(e);
@@ -87,7 +81,6 @@ async function main() {
       }
     }
   }
-  writeFileSync("data/log.json", JSON.stringify(gasUsedPerLevel, null, 2));
   writeFileSync("data/error.json", JSON.stringify(errors, null, 2));
 
   const total = Number(await schneeball.functions["totalSupply()"]());
