@@ -15,7 +15,15 @@ const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
 const MINT_FEE = parseEther("0.1");
 const partners: { [tokenId: number]: string[] } = {};
 const addresses: string[] = [];
+interface Event {
+  type: "Mint" | "Toss";
+  tokenId: number | undefined;
+  level: number | undefined;
 
+  to: string;
+  timestamp: number;
+}
+const history: Event[] = [];
 async function hasTokens(contract: Contract, address: string) {
   const balance = await contract["balanceOf(address)"](address);
   return Number(balance) > 0;
@@ -40,16 +48,16 @@ async function getMaxToken(contract: Contract, address: string) {
 }
 
 function getRandomAddress(currentAddress: string, tokenId: number) {
-  const randIndex = randomInt(100);
+  const randIndex = randomInt(addresses.length);
   let randAddress = addresses[randIndex];
   if (!partners[tokenId]) {
     partners[tokenId] = [];
   }
   while (
-    randAddress !== currentAddress ||
+    randAddress === currentAddress ||
     partners[tokenId].includes(randAddress)
   ) {
-    const randIndex = randomInt(100);
+    const randIndex = randomInt(addresses.length);
     randAddress = addresses[randIndex];
   }
   return randAddress;
@@ -91,14 +99,28 @@ async function main() {
           });
         await transferTx.wait();
         console.log(
-          `${currentAddress} tossed to ${randAddress} with level ${level}`
+          `${currentAddress} tossed to ${randAddress} with token ${token} at ${level}`
         );
+        history.push({
+          timestamp: Date.now(),
+          type: "Toss",
+          to: randAddress,
+          tokenId: token,
+          level: level,
+        });
       } else {
         console.log(`${currentAddress} minted...`);
         const mintTx = await schneeball.connect(signer).mint(currentAddress, {
           value: MINT_FEE,
         });
         await mintTx.wait();
+        history.push({
+          type: "Mint",
+          timestamp: Date.now(),
+          to: currentAddress,
+          tokenId: undefined,
+          level: 1,
+        });
       }
     } catch (e: any) {
       console.log({ e });
@@ -119,6 +141,7 @@ async function main() {
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
   writeFileSync("data/round.json", JSON.stringify(roundData, null, 2));
+  writeFileSync("data/history.json", JSON.stringify(history, null, 2));
 
   for (let i = 1; i <= total; i++) {
     const owner = (await schneeball["ownerOf(uint256)"](i))[0];
