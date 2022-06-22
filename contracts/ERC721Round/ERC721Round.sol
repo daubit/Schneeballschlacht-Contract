@@ -5,7 +5,10 @@ pragma solidity ^0.8.0;
 
 import "./IERC721Round.sol";
 import "./IERC721MetadataRound.sol";
+import "./IERC721EnumerableRound.sol";
+import "./SnowballStructs.sol";
 import "../ISchneeballSchlacht.sol";
+import "../Escrow.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -24,7 +27,8 @@ abstract contract ERC721Round is
     Context,
     ERC165,
     IERC721Round,
-    IERC721MetadataRound
+    IERC721MetadataRound,
+    IERC721EnumerableRound
 {
     using Address for address;
     using Strings for uint256;
@@ -48,21 +52,19 @@ abstract contract ERC721Round is
     // Mapping owner address to token count
     mapping(uint256 => mapping(address => uint256)) private _balances;
 
+    // Mapping owner address to index to token id
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
+        private _tokenOwners;
+
+    // Mapping token id to token index in _tokenOwners
+    mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
+
     // Mapping from owner to operator approvals
     mapping(uint256 => mapping(address => mapping(address => bool)))
         private _operatorApprovals;
 
     // Mapping from token ID to approved address
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
-
-    struct Round {
-        address winner;
-        address escrow;
-        uint256 payout;
-        uint256 startHeight;
-        uint256 endHeight;
-        uint256 totalSupply;
-    }
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -110,7 +112,7 @@ abstract contract ERC721Round is
     }
 
     function balanceOf(uint256 roundId, address owner)
-        external
+        public
         view
         virtual
         returns (uint256)
@@ -429,6 +431,8 @@ abstract contract ERC721Round is
         _owners[roundId][tokenId] = to;
         _rounds[roundId].totalSupply++;
 
+        _addTokenOwner(to, tokenId);
+
         emit Transfer(address(0), to, tokenId);
 
         _afterTokenTransfer(address(0), to, tokenId);
@@ -461,9 +465,13 @@ abstract contract ERC721Round is
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
 
+        _removeOwner(from, tokenId);
+
         _balances[roundId][from] -= 1;
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
+
+        _addTokenOwner(to, tokenId);
 
         emit Transfer(from, to, tokenId);
 
@@ -603,7 +611,7 @@ abstract contract ERC721Round is
         }
     }
 
-    function getRoundId() internal view returns (uint256) {
+    function getRoundId() public view returns (uint256) {
         return _roundIdCounter.current();
     }
 
@@ -641,6 +649,14 @@ abstract contract ERC721Round is
         _rounds[roundId].winner = winner;
     }
 
+    function getPayoutPerLevel(uint256 roundId)
+        external
+        view
+        returns (uint256)
+    {
+        return _rounds[roundId].payoutPerLevel;
+    }
+
     function startRound() public virtual {
         uint256 endHeight = block.number + _duration();
         uint256 newRound = newRoundId();
@@ -650,8 +666,41 @@ abstract contract ERC721Round is
             winner: address(0),
             escrow: address(0),
             totalSupply: 0,
-            payout: 0
+            payoutPerLevel: 0,
+            totalPayout: 0,
+            totalThrows: 0
         });
+    }
+
+    function _addTokenOwner(address to, uint256 tokenId) internal {
+        // assumes that balanceOf was already increased
+        uint256 length = balanceOf(to) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        _tokenOwners[round][to][length] = tokenId;
+        _tokenOwnersIndex[round][tokenId] = length;
+    }
+
+    // adapted from from _removeTokenFromOwnerEnumeration (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol)
+    function _removeOwner(address from, uint256 tokenId) internal {
+        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        // assumes balance was not already decremented
+        uint256 lastTokenIndex = balanceOf(from) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = _tokenOwners[round][from][lastTokenIndex];
+
+            _tokenOwners[round][from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            _tokenOwnersIndex[round][lastTokenId] = tokenIndex; // Update the moved token's index
+        }
+
+        // This also deletes the contents at the last position of the array
+        delete _tokenOwnersIndex[round][tokenId];
+        delete _tokenOwners[round][from][lastTokenIndex];
     }
 
     function endRound() public virtual {
@@ -663,18 +712,53 @@ abstract contract ERC721Round is
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
-        _rounds[roundId].payout = address(this).balance;
+        _rounds[roundId].totalPayout = address(this).balance;
         // Create Escrow Contract
         // Send value to contract
         // store address
     }
 
+    function proccesspayout() internal virtual {}
+
+    function getTokensOfAddress(uint256 round, address addr)
+        public
+        view
+        virtual
+        returns (uint256[] memory)
+    {
+        uint256 amount = balanceOf(round, addr);
+        uint256[] memory ret = new uint256[](amount);
+
+        for (uint256 index = 0; index < amount; index++) {
+            ret[index] = _tokenOwners[round][addr][index];
+        }
+
+        return ret;
+    }
+
+    function getTokensOfAddress(address addr)
+        external
+        view
+        virtual
+        returns (uint256[] memory)
+    {
+        return getTokensOfAddress(_roundIdCounter.current(), addr);
+    }
+
+    function getTokenOwner(
+        uint256 round,
+        address addr,
+        uint256 index
+    ) public view virtual returns (uint256) {
+        return _tokenOwners[round][addr][index];
+    }
+
     function getPayout() external view returns (uint256) {
         uint256 roundId = getRoundId();
-        return _rounds[roundId].payout;
+        return _rounds[roundId].totalPayout;
     }
 
     function getPayout(uint256 roundId) external view returns (uint256) {
-        return _rounds[roundId].payout;
+        return _rounds[roundId].totalPayout;
     }
 }

@@ -1,6 +1,11 @@
-pragma solidity 0.8.15;
+pragma solidity ^0.8.0;
 
-interface ISchneeballSchlacht {
+import "./ERC721Round/IERC721Round.sol";
+import "./ERC721Round/IERC721EnumerableRound.sol";
+import "./ERC721Round/SnowballStructs.sol";
+
+interface ISchneeballSchlacht is IERC721Round, IERC721EnumerableRound {
+
     function toss(address to, uint256 tokenId) external payable;
 
     function mint(address to) external payable;

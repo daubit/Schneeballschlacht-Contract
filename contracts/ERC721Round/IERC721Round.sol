@@ -4,11 +4,12 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import "./IERC721RoundData.sol";
 
 /**
  * @dev Required interface of an ERC721 compliant contract.
  */
-interface IERC721Round is IERC165 {
+interface IERC721Round is IERC165, IERC721RoundData {
     /**
      * @dev Emitted when `tokenId` token is transferred from `from` to `to`.
      */
