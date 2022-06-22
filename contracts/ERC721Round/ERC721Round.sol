@@ -52,7 +52,8 @@ abstract contract ERC721Round is
     mapping(uint256 => mapping(address => uint256)) private _balances;
 
     // Mapping owner address to index to token id
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) private _tokenOwners;
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
+        private _tokenOwners;
 
     // Mapping token id to token index in _tokenOwners
     mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
@@ -63,16 +64,6 @@ abstract contract ERC721Round is
 
     // Mapping from token ID to approved address
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
-
-    mapping(uint256 => Counters.Counter) private _tokenIdCounters;
-
-    modifier checkToken(uint256 tokenId) {
-        require(
-            tokenId > 0 && tokenId <= _tokenIdCounter.current(),
-            "Invalid token ID!"
-        );
-        _;
-    }
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -437,7 +428,7 @@ abstract contract ERC721Round is
 
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
-        _rounds[roundId].totalBalls++;
+        _rounds[roundId].totalSupply++;
 
         _addTokenOwner(to, tokenId);
 
@@ -613,9 +604,9 @@ abstract contract ERC721Round is
     {
         require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
         if (roundId == getRoundId()) {
-            return getTokenId() - 1;
+            return getTokenId();
         } else {
-            return _rounds[roundId].totalBalls;
+            return _rounds[roundId].totalSupply;
         }
     }
 
@@ -648,20 +639,34 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
-    function getPayoutPerLevel(uint256 roundId) external view returns (uint256) {
+    function _duration() internal view virtual returns (uint256) {
+        return (31 days / 2 seconds);
+    }
+
+    function setWinner(address winner) internal {
+        uint256 roundId = getRoundId();
+        _rounds[roundId].winner = winner;
+    }
+
+    function getPayoutPerLevel(uint256 roundId)
+        external
+        view
+        returns (uint256)
+    {
         return _rounds[roundId].payoutPerLevel;
     }
 
     function startRound() public virtual {
-        uint256 endHeight = block.number + (31 days / 2 seconds);
+        uint256 endHeight = block.number + _duration();
         uint256 newRound = newRoundId();
         _rounds[newRound] = Round({
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
+            escrow: address(0),
+            totalSupply: 0,
             payoutPerLevel: 0,
             totalPayout: 0,
-            totalBalls: 0,
             totalThrows: 0
         });
     }
@@ -698,27 +703,23 @@ abstract contract ERC721Round is
     }
 
     function endRound() public virtual {
-        require(
-            block.number >= getEndHeight(),
-            "The end height havent arrived yet"
-        );
-
-        uint256 total = getTokenId() - 1;
+        uint256 total = getTokenId();
+        uint256 roundId = getRoundId();
         _tokenIdCounter.reset();
         _tokenIdCounter.increment();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
+        _rounds[roundId].totalPayout = address(this).balance;
         // Create Escrow Contract
         // Send value to contract
         // store address
-        // increase roundId
     }
 
     function getTokensOfAddress(uint256 round, address addr) public view virtual returns (uint256[] memory) {
         uint256 amount = balanceOf(round, addr);
-        uint[] memory ret = new uint[](amount);
+        uint256[] memory ret = new uint256[](amount);
 
         for (uint256 index = 0; index < amount; index++) {
             ret[index] = _tokenOwners[round][addr][index];
@@ -727,11 +728,20 @@ abstract contract ERC721Round is
         return ret;
     }
 
-    function getTokensOfAddress(address addr) external view virtual returns (uint256[] memory) {
+    function getTokensOfAddress(address addr)
+        external
+        view
+        virtual
+        returns (uint256[] memory)
+    {
         return getTokensOfAddress(_roundIdCounter.current(), addr);
     }
 
-    function getTokenOwner(uint256 round, address addr, uint256 index) public view virtual returns (uint256) {
+    function getTokenOwner(
+        uint256 round,
+        address addr,
+        uint256 index
+    ) public view virtual returns (uint256) {
         return _tokenOwners[round][addr][index];
     }
 

@@ -18,12 +18,22 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
 
     // Mapping roundId to snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
-    
+
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
+    event Winner(
+        uint256 indexed roundId,
+        address indexed player,
+        uint256 indexed tokenId
+    );
 
     constructor() ERC721Round("SchneeballSchlacht", "Schneeball") {
         lock();
         _finished = false;
+    }
+
+    modifier checkToken(uint256 tokenId) {
+        require(tokenId > 0 && tokenId <= getTokenId(), "Invalid token ID!");
+        _;
     }
 
     modifier checkFee(uint256 tokenId) {
@@ -35,11 +45,12 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
     }
 
     modifier onlyUnlocked() {
+        string memory message = "No round is running!";
         if (block.number >= getEndHeight()) {
             lock();
-            require(false, "Reached Deadline");
+            message = "End height has been reached! Round is over!";
         }
-        require(!_isLocked, "No round is running!");
+        require(!_isLocked, message);
         _;
     }
 
@@ -94,8 +105,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
             );
     }
 
-    function mint(address to) public payable onlyUnlocked {
-        require(msg.value == MINT_FEE, "Insufficient fee!");
+    function _mint(address to) internal {
         uint256 roundId = getRoundId();
         uint256 tokenId = newTokenId();
         _safeMint(to, tokenId);
@@ -104,6 +114,11 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
             partners: new uint256[](0),
             parentSnowballId: 0
         });
+    }
+
+    function mint(address to) public payable onlyUnlocked {
+        require(msg.value == MINT_FEE, "Insufficient fee!");
+        _mint(to);
     }
 
     function getPartnerTokenIds(uint256 tokenId)
@@ -182,13 +197,13 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
             level + 1 < MAX_LEVEL &&
             _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
-            levelup(tokenId);
+            levelup(to, tokenId);
         } else if (
             level < MAX_LEVEL &&
             _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
             uint256 winnerTokenId = newTokenId();
-            _safeMint(to, winnerTokenId);
+            _safeMint(msg.sender, winnerTokenId);
             _snowballs[roundId][winnerTokenId] = Snowball({
                 level: 20,
                 parentSnowballId: tokenId,
@@ -199,7 +214,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         }
     }
 
-    function levelup(uint256 tokenId) internal {
+    function levelup(address to, uint256 tokenId) internal {
         uint256 roundId = getRoundId();
         uint256 amountOldPartners = _snowballs[roundId][tokenId]
             .partners
@@ -215,6 +230,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         uint8 randLevel = _snowballs[roundId][randToken].level;
         if (randLevel + 1 < MAX_LEVEL) {
             uint256 upgradedTokenId = newTokenId();
+            _safeMint(to, upgradedTokenId);
             _snowballs[roundId][upgradedTokenId] = Snowball({
                 level: randLevel + 1,
                 partners: new uint256[](0),
@@ -237,6 +253,31 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         return uint256(hashValue) % length;
     }
 
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+
     function startRound()
         public
         override(ERC721Round, ISchneeballSchlacht)
@@ -244,6 +285,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
     {
         unlock();
         ERC721Round.startRound();
+        _mint(msg.sender);
     }
 
     function endRound()
@@ -280,18 +322,28 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         _isLocked = false;
     }
 
-    function getSnowballsOfAddress(uint256 round, address addr) public view virtual returns (Snowball[] memory) {
+    function getSnowballsOfAddress(uint256 round, address addr)
+        public
+        view
+        virtual
+        returns (Snowball[] memory)
+    {
         uint256 amount = balanceOf(round, addr);
         Snowball[] memory ret = new Snowball[](amount);
 
         for (uint256 index = 0; index < amount; index++) {
-            ret[index] = _snowballs[round][getTokenOwner(round,addr,index)];
+            ret[index] = _snowballs[round][getTokenOwner(round, addr, index)];
         }
 
         return ret;
     }
 
-    function getSnowballsOfAddress(address addr) external view virtual returns (Snowball[] memory) {
+    function getSnowballsOfAddress(address addr)
+        external
+        view
+        virtual
+        returns (Snowball[] memory)
+    {
         return getSnowballsOfAddress(getRoundId(), addr);
     }
 
@@ -311,9 +363,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         uint256 totalPayout = totalLevels * payoutPerLevel;
         escrow.deposit{value: totalPayout}();
     }
-    
+
     function finish() internal {
         unlock();
         _finished = true;
+        setWinner(msg.sender);
     }
 }
