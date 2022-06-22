@@ -177,6 +177,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             ownerOf(tokenId) == msg.sender,
             "ERC721: transfer from incorrect owner"
         );
+        require(to != msg.sender, "Cannot toss to yourself!");
         require(to != address(0), "ERC721: transfer to the zero address");
 
         uint256 roundId = getRoundId();

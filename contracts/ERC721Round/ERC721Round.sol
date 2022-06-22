@@ -652,6 +652,15 @@ abstract contract ERC721Round is
         emit Winner(roundId, winner);
     }
 
+    function getWinner() public view returns (address) {
+        uint256 roundId = getRoundId();
+        return _rounds[roundId].winner;
+    }
+
+    function getWinner(uint256 roundId) public view returns (address) {
+        return _rounds[roundId].winner;
+    }
+
     function getPayoutPerLevel(uint256 roundId)
         external
         view
