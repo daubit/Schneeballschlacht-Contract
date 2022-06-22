@@ -109,7 +109,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             partners: new uint256[](0),
             parentSnowballId: 0
         });
-        addPayment(MINT_FEE);
+        addToPayout(MINT_FEE);
     }
 
     function getPartnerTokenIds(uint256 tokenId)
@@ -203,7 +203,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             // End Game
             finish();
         }
-        addPayment(TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level);
+        addToPayout(TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level);
     }
 
     function levelup(uint256 tokenId) internal {

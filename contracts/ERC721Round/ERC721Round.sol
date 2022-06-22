@@ -697,8 +697,17 @@ abstract contract ERC721Round is
         // increase roundId
     }
 
-    function addPayment(uint256 amount) internal {
+    function addToPayout(uint256 amount) internal {
         uint256 roundId = getRoundId();
         _rounds[roundId].totalSupply += amount;
+    }
+
+    function getPayout() external view returns (uint256) {
+        uint256 roundId = getRoundId();
+        return _rounds[roundId].payout;
+    }
+
+    function getPayout(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].payout;
     }
 }
