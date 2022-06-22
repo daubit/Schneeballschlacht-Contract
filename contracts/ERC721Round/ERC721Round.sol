@@ -685,13 +685,15 @@ abstract contract ERC721Round is
     }
 
     function endRound() public virtual {
-        uint256 total = getTokenId() - 1;
+        uint256 total = getTokenId();
+        uint256 roundId = getRoundId();
         _tokenIdCounter.reset();
         _tokenIdCounter.increment();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
+        _rounds[roundId].payout = address(this).balance;
         // Create Escrow Contract
         // Send value to contract
         // store address
