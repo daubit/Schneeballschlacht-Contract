@@ -36,8 +36,9 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         _finished = false;
     }
 
-    function _duration() internal view virtual override returns (uint256) {
-        return 1 days / 2 seconds;
+    modifier checkToken(uint256 tokenId) {
+        require(tokenId > 0 && tokenId <= getTokenId(), "Invalid token ID!");
+        _;
     }
 
     modifier checkFee(uint256 tokenId) {
@@ -262,6 +263,31 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             )
         );
         return uint256(hashValue) % length;
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override onlyUnlocked {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override onlyUnlocked {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public virtual override onlyUnlocked {
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 
     function startRound()
