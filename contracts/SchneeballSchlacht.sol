@@ -347,7 +347,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         return getSnowballsOfAddress(getRoundId(), addr);
     }
 
-    function proccesspayout(uint256 round) internal {
+    function _proccessPayout(uint256 round) internal returns(uint256,uint256,uint256) {
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
         addEscrow(round, escrow);
 
@@ -362,6 +362,8 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         // because there is leftover wei we need to make sure we only transfer to escrow what is needed
         uint256 totalPayout = totalLevels * payoutPerLevel;
         escrow.deposit{value: totalPayout}();
+
+        return (totalLevels, totalPayout, payoutPerLevel);
     }
 
     function finish() internal {
