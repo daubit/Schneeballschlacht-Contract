@@ -64,13 +64,7 @@ abstract contract ERC721Round is
         uint256 totalSupply;
     }
 
-    modifier checkToken(uint256 tokenId) {
-        require(
-            tokenId > 0 && tokenId <= _tokenIdCounter.current(),
-            "Invalid token ID!"
-        );
-        _;
-    }
+
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -632,7 +626,7 @@ abstract contract ERC721Round is
     {
         require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
         if (roundId == getRoundId()) {
-            return getTokenId() - 1;
+            return getTokenId();
         } else {
             return _rounds[roundId].totalSupply;
         }
