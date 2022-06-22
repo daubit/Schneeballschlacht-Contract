@@ -19,6 +19,11 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
+    event Winner(
+        uint256 indexed roundId,
+        address indexed player,
+        uint256 indexed tokenId
+    );
 
     struct Snowball {
         uint8 level;
@@ -31,6 +36,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         _finished = false;
     }
 
+    function _duration() internal view virtual override returns (uint256) {
+        return 1 days / 2 seconds;
+    }
+
     modifier checkFee(uint256 tokenId) {
         require(
             msg.value == TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level,
@@ -40,11 +49,12 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     }
 
     modifier onlyUnlocked() {
+        string memory message = "No round is running!";
         if (block.number >= getEndHeight()) {
             lock();
-            require(false, "Reached Deadline");
+            message = "End height has been reached! Round is over!";
         }
-        require(!_isLocked, "No round is running!");
+        require(!_isLocked, message);
         _;
     }
 
@@ -99,6 +109,17 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             );
     }
 
+    function genesisMint(address to) internal {
+        uint256 roundId = getRoundId();
+        uint256 tokenId = newTokenId();
+        _safeMint(to, tokenId);
+        _snowballs[roundId][tokenId] = Snowball({
+            level: 1,
+            partners: new uint256[](0),
+            parentSnowballId: 0
+        });
+    }
+
     function mint(address to) public payable onlyUnlocked {
         require(msg.value == MINT_FEE, "Insufficient fee!");
         uint256 roundId = getRoundId();
@@ -109,7 +130,6 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             partners: new uint256[](0),
             parentSnowballId: 0
         });
-        addToPayout(MINT_FEE);
     }
 
     function getPartnerTokenIds(uint256 tokenId)
@@ -203,7 +223,6 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             // End Game
             finish();
         }
-        addToPayout(TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level);
     }
 
     function levelup(uint256 tokenId) internal {
@@ -251,6 +270,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     {
         unlock();
         ERC721Round.startRound();
+        genesisMint(msg.sender);
     }
 
     function endRound()

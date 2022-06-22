@@ -57,6 +57,7 @@ abstract contract ERC721Round is
 
     struct Round {
         address winner;
+        address escrow;
         uint256 payout;
         uint256 startHeight;
         uint256 endHeight;
@@ -666,13 +667,18 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
+    function _duration() internal view virtual returns (uint256) {
+        return (31 days / 2 seconds);
+    }
+
     function startRound() public virtual {
-        uint256 endHeight = block.number + (31 days / 2 seconds);
+        uint256 endHeight = block.number + _duration();
         uint256 newRound = newRoundId();
         _rounds[newRound] = Round({
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
+            escrow: address(0),
             payout: 0,
             totalSupply: 0
         });
@@ -695,11 +701,6 @@ abstract contract ERC721Round is
         // Send value to contract
         // store address
         // increase roundId
-    }
-
-    function addToPayout(uint256 amount) internal {
-        uint256 roundId = getRoundId();
-        _rounds[roundId].totalSupply += amount;
     }
 
     function getPayout() external view returns (uint256) {
