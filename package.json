@@ -1,11 +1,11 @@
 {
-  "name": "ponzidao",
+  "name": "schneeballschlacht",
   "scripts": {
     "ganache": "ganache-cli --networkId 1337",
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage --network development",
-    "test:dev": "npx hardhat test --network development"
+    "test": "npx hardhat test test/index.ts --network development"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
