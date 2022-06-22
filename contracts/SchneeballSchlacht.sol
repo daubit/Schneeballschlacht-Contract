@@ -337,5 +337,6 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     function finish() internal {
         unlock();
         _finished = true;
+        setWinner(msg.sender);
     }
 }

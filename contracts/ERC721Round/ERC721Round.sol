@@ -64,8 +64,6 @@ abstract contract ERC721Round is
         uint256 totalSupply;
     }
 
-
-
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
@@ -665,6 +663,11 @@ abstract contract ERC721Round is
         return (31 days / 2 seconds);
     }
 
+    function setWinner(address winner) internal {
+        uint256 roundId = getRoundId();
+        _rounds[roundId].winner = winner;
+    }
+
     function startRound() public virtual {
         uint256 endHeight = block.number + _duration();
         uint256 newRound = newRoundId();
@@ -673,8 +676,8 @@ abstract contract ERC721Round is
             endHeight: endHeight,
             winner: address(0),
             escrow: address(0),
-            payout: 0,
-            totalSupply: 0
+            totalSupply: 0,
+            payout: 0
         });
     }
 
