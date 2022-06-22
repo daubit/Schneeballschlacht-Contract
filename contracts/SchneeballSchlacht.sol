@@ -13,6 +13,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
     bool private _isLocked;
+    bool private _finished;
 
     // Mapping roundId to snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
@@ -21,6 +22,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
     constructor() ERC721Round("SchneeballSchlacht", "Schneeball") {
         lock();
+        _finished = false;
     }
 
     modifier checkFee(uint256 tokenId) {
@@ -34,6 +36,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     modifier onlyUnlocked() {
         if (block.number >= getEndHeight()) {
             lock();
+            require(false, "Reached Deadline");
         }
         require(!_isLocked, "No round is running!");
         _;
@@ -41,6 +44,11 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
     modifier onlyLocked() {
         require(_isLocked, "Round is still running!");
+        _;
+    }
+
+    modifier onlyFinished() {
+        require(_finished, "No game has finished!");
         _;
     }
 
@@ -88,15 +96,13 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     function mint(address to) public payable onlyUnlocked {
         require(msg.value == MINT_FEE, "Insufficient fee!");
         uint256 roundId = getRoundId();
-        uint256 tokenId = getTokenId();
-        incrementTokenId();
+        uint256 tokenId = newTokenId();
         _safeMint(to, tokenId);
-        Snowball memory snowball = Snowball({
+        _snowballs[roundId][tokenId] = Snowball({
             level: 1,
             partners: new uint256[](0),
             parentSnowballId: 0
         });
-        _snowballs[roundId][tokenId] = snowball;
     }
 
     function getPartnerTokenIds(uint256 tokenId)
@@ -161,16 +167,15 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         uint256 roundId = getRoundId();
         uint8 level = _snowballs[roundId][tokenId].level;
 
-        uint256 newTokenId = getTokenId();
-        incrementTokenId();
-        _safeMint(to, newTokenId);
+        uint256 newToken = newTokenId();
+        _safeMint(to, newToken);
 
-        _snowballs[roundId][newTokenId] = Snowball({
+        _snowballs[roundId][newToken] = Snowball({
             level: level,
             parentSnowballId: tokenId,
             partners: new uint256[](0)
         });
-        _snowballs[roundId][tokenId].partners.push(newTokenId);
+        _snowballs[roundId][tokenId].partners.push(newToken);
 
         if (
             level + 1 < MAX_LEVEL &&
@@ -181,8 +186,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             level < MAX_LEVEL &&
             _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
-            uint256 winnerTokenId = getTokenId();
-            incrementTokenId();
+            uint256 winnerTokenId = newTokenId();
             _safeMint(to, winnerTokenId);
             _snowballs[roundId][winnerTokenId] = Snowball({
                 level: 20,
@@ -190,7 +194,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
                 partners: new uint256[](0)
             });
             // End Game
-            lock();
+            finish();
         }
     }
 
@@ -209,8 +213,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         uint256 randToken = partners[randIndex];
         uint8 randLevel = _snowballs[roundId][randToken].level;
         if (randLevel + 1 < MAX_LEVEL) {
-            uint256 upgradedTokenId = getTokenId();
-            incrementTokenId();
+            uint256 upgradedTokenId = newTokenId();
             _snowballs[roundId][upgradedTokenId] = Snowball({
                 level: randLevel + 1,
                 partners: new uint256[](0),
@@ -245,7 +248,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     function endRound()
         public
         override(ERC721Round, ISchneeballSchlacht)
-        onlyLocked
+        onlyFinished
     {
         ERC721Round.endRound();
     }
@@ -309,6 +312,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         // because there is leftover wei we need to make sure we only transfer to escrow what is needed
         uint256 totalPayout = totalLevels * payoutPerLevel;
         escrow.deposit{value: totalPayout}();
-
+    }
+    
+    function finish() internal {
+        unlock();
+        _finished = true;
     }
 }

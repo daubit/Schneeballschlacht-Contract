@@ -69,7 +69,7 @@ abstract contract ERC721Round is
 
     modifier checkToken(uint256 tokenId) {
         require(
-            tokenId > 0 && tokenId < _tokenIdCounter.current(),
+            tokenId > 0 && tokenId <= _tokenIdCounter.current(),
             "Invalid token ID!"
         );
         _;
@@ -79,8 +79,6 @@ abstract contract ERC721Round is
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
     constructor(string memory name_, string memory symbol_) {
-        _roundIdCounter.increment();
-        _tokenIdCounter.increment();
         _name = name_;
         _symbol = symbol_;
     }
@@ -118,6 +116,7 @@ abstract contract ERC721Round is
             "ERC721: address zero is not a valid owner"
         );
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         return _balances[roundId][owner];
     }
 
@@ -131,6 +130,7 @@ abstract contract ERC721Round is
             owner != address(0),
             "ERC721: address zero is not a valid owner"
         );
+        require(roundId > 0, "No Round started yet!");
         return _balances[roundId][owner];
     }
 
@@ -147,6 +147,7 @@ abstract contract ERC721Round is
         uint256 roundId = getRoundId();
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
+        require(roundId > 0, "No Round started yet!");
         return owner;
     }
 
@@ -157,6 +158,7 @@ abstract contract ERC721Round is
     {
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "ERC721: invalid token ID");
+        require(roundId > 0, "No Round started yet!");
         return owner;
     }
 
@@ -231,6 +233,7 @@ abstract contract ERC721Round is
     {
         _requireMinted(tokenId);
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -240,6 +243,7 @@ abstract contract ERC721Round is
         returns (address)
     {
         _requireMinted(tokenId);
+        require(roundId > 0, "No Round started yet!");
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -273,6 +277,7 @@ abstract contract ERC721Round is
         address owner,
         address operator
     ) external view returns (bool) {
+        require(roundId > 0, "No Round started yet!");
         return _operatorApprovals[roundId][owner][operator];
     }
 
@@ -532,6 +537,7 @@ abstract contract ERC721Round is
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
@@ -624,7 +630,7 @@ abstract contract ERC721Round is
     ) internal virtual {}
 
     function totalSupply() public view virtual returns (uint256) {
-        return getTokenId() - 1;
+        return getTokenId();
     }
 
     function totalSupply(uint256 roundId)
@@ -645,24 +651,28 @@ abstract contract ERC721Round is
         return _roundIdCounter.current();
     }
 
-    function incrementRoundId() internal {
+    function newRoundId() internal returns (uint256) {
         _roundIdCounter.increment();
+        return _roundIdCounter.current();
     }
 
     function getTokenId() internal view returns (uint256) {
         return _tokenIdCounter.current();
     }
 
-    function incrementTokenId() internal {
+    function newTokenId() internal returns (uint256) {
         _tokenIdCounter.increment();
+        return _tokenIdCounter.current();
     }
 
     function getEndHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         return _rounds[roundId].endHeight;
     }
 
     function getEndHeight(uint256 roundId) external view returns (uint256) {
+        require(roundId > 0, "No Round started yet!");
         return _rounds[roundId].endHeight;
     }
 
@@ -672,7 +682,8 @@ abstract contract ERC721Round is
 
     function startRound() public virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
-        Round memory round = Round({
+        uint256 newRound = newRoundId();
+        _rounds[newRound] = Round({
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
@@ -681,8 +692,6 @@ abstract contract ERC721Round is
             totalBalls: 0,
             totalThrows: 0
         });
-        uint256 roundId = getRoundId();
-        _rounds[roundId] = round;
     }
 
     function _addTokenOwner(address to, uint256 tokenId) internal {
@@ -723,7 +732,7 @@ abstract contract ERC721Round is
 
         uint256 total = getTokenId() - 1;
         _tokenIdCounter.reset();
-        incrementTokenId();
+        _tokenIdCounter.increment();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
@@ -732,7 +741,6 @@ abstract contract ERC721Round is
         // Send value to contract
         // store address
         // increase roundId
-        incrementRoundId();
     }
 
     function proccesspayout() internal virtual { }
@@ -754,5 +762,14 @@ abstract contract ERC721Round is
 
     function getTokenOwner(uint256 round, address addr, uint256 index) public view virtual returns (uint256) {
         return _tokenOwners[round][addr][index];
+    }
+
+    function getPayout() external view returns (uint256) {
+        uint256 roundId = getRoundId();
+        return _rounds[roundId].totalPayout;
+    }
+
+    function getPayout(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].totalPayout;
     }
 }
