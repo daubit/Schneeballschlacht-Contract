@@ -110,7 +110,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             );
     }
 
-    function genesisMint(address to) internal {
+    function _mint(address to) internal {
         uint256 roundId = getRoundId();
         uint256 tokenId = newTokenId();
         _safeMint(to, tokenId);
@@ -123,14 +123,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
     function mint(address to) public payable onlyUnlocked {
         require(msg.value == MINT_FEE, "Insufficient fee!");
-        uint256 roundId = getRoundId();
-        uint256 tokenId = newTokenId();
-        _safeMint(to, tokenId);
-        _snowballs[roundId][tokenId] = Snowball({
-            level: 1,
-            partners: new uint256[](0),
-            parentSnowballId: 0
-        });
+        _mint(to);
     }
 
     function getPartnerTokenIds(uint256 tokenId)
@@ -297,7 +290,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     {
         unlock();
         ERC721Round.startRound();
-        genesisMint(msg.sender);
+        _mint(msg.sender);
     }
 
     function endRound()
