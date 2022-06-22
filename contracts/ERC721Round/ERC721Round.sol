@@ -685,11 +685,6 @@ abstract contract ERC721Round is
     }
 
     function endRound() public virtual {
-        require(
-            block.number >= getEndHeight(),
-            "The end height havent arrived yet"
-        );
-
         uint256 total = getTokenId() - 1;
         _tokenIdCounter.reset();
         _tokenIdCounter.increment();
@@ -700,7 +695,6 @@ abstract contract ERC721Round is
         // Create Escrow Contract
         // Send value to contract
         // store address
-        // increase roundId
     }
 
     function getPayout() external view returns (uint256) {
