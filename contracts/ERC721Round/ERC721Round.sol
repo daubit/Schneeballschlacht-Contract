@@ -66,6 +66,8 @@ abstract contract ERC721Round is
     // Mapping from token ID to approved address
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
 
+    event Winner(uint256 indexed roundId, address indexed player);
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
@@ -647,6 +649,7 @@ abstract contract ERC721Round is
     function setWinner(address winner) internal {
         uint256 roundId = getRoundId();
         _rounds[roundId].winner = winner;
+        emit Winner(roundId, winner);
     }
 
     function getPayoutPerLevel(uint256 roundId)
@@ -667,8 +670,7 @@ abstract contract ERC721Round is
             escrow: address(0),
             totalSupply: 0,
             payoutPerLevel: 0,
-            totalPayout: 0,
-            totalThrows: 0
+            totalPayout: 0
         });
     }
 

@@ -7,7 +7,6 @@ struct Round {
     uint256 payoutPerLevel;
     uint256 startHeight;
     uint256 endHeight;
-    uint256 totalThrows;
     uint256 totalSupply;
 }
 

@@ -18,12 +18,10 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     // Mapping roundId to snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
+    // Mapping roundId to totalThrows
+    mapping(uint256 => uint256) private _tosses;
+
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
-    event Winner(
-        uint256 indexed roundId,
-        address indexed player,
-        uint256 indexed tokenId
-    );
 
     constructor() ERC721Round("SchneeballSchlacht", "Schneeball") {
         lock();
@@ -48,6 +46,8 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         if (block.number >= getEndHeight()) {
             lock();
             message = "End height has been reached! Round is over!";
+        } else if (_finished) {
+            message = "Round has finished";
         }
         require(!_isLocked, message);
         _;
@@ -191,6 +191,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             partners: new uint256[](0)
         });
         _snowballs[roundId][tokenId].partners.push(newToken);
+        _tosses[roundId]++;
 
         if (
             level + 1 < MAX_LEVEL &&
@@ -285,6 +286,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         unlock();
         ERC721Round.startRound();
         _mint(msg.sender);
+        _finished = false;
     }
 
     function endRound()
@@ -311,6 +313,15 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         returns (uint256)
     {
         return ERC721Round.totalSupply(roundId);
+    }
+
+    function totalTosses() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        return _tosses[roundId];
+    }
+
+    function totalTosses(uint256 roundId) public view returns (uint256) {
+        return _tosses[roundId];
     }
 
     function lock() internal {
@@ -367,7 +378,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     }
 
     function finish() internal {
-        unlock();
+        lock();
         _finished = true;
         setWinner(msg.sender);
     }
