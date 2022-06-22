@@ -10,15 +10,14 @@ import "./ISchneeballSchlacht.sol";
 contract Escrow is Ownable {
     using Address for address payable;
 
-    //event Deposited(address indexed payee, uint256 weiAmount);
     event Withdrawn(address indexed payee, uint256 weiAmount);
 
-    uint32 private _round;
+    uint256 private _round;
     ISchneeballSchlacht private _schneeballschlacht;
 
     mapping(address => bool) private _hasDeposit;
 
-    constructor(uint32 round, ISchneeballSchlacht schneeballschlacht) {
+    constructor(uint256 round, ISchneeballSchlacht schneeballschlacht) {
         _round = round;
         _schneeballschlacht = schneeballschlacht;
     }
@@ -37,6 +36,11 @@ contract Escrow is Ownable {
         }
     }
 
+    function deposit() public payable virtual {
+        // noop to deposit funds
+    }
+
+    // TODO: do we need onlyowner here?
     function withdraw(address payable payee) public virtual onlyOwner {
         require(_hasDeposit[payee] == true, "Deposit already withdrawn");
 

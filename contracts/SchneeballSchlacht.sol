@@ -275,4 +275,40 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
     function unlock() internal {
         _isLocked = false;
     }
+
+    function getSnowballsOfAddress(uint256 round, address addr) public view virtual returns (Snowball[] memory) {
+        uint256 amount = balanceOf(round, addr);
+        Snowball[] memory ret = new Snowball[](amount);
+
+        for (uint256 index = 0; index < amount; index++) {
+            ret[index] = _snowballs[round][getTokenOwner(round,addr,index)];
+        }
+
+        return ret;
+    }
+
+    function getSnowballsOfAddress(address addr) external view virtual returns (Snowball[] memory) {
+        return getSnowballsOfAddress(getRoundId(), addr);
+    }
+
+    mapping (uint256 => Escrow) _escrow;
+
+    function proccesspayout() internal override {
+        uint256 round = getRoundId();
+        Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
+        _escrow[round] = escrow;
+
+        uint256 totalLevels = 0;
+
+        for (uint256 index = 0; index < totalSupply(round); index++) {
+            totalLevels += _snowballs[round][index].level;
+        }
+
+        // max totalLevels wei are leftover each round for the next round
+        uint256 payoutPerLevel = address(this).balance / totalLevels;
+        // because there is leftover wei we need to make sure we only transfer to escrow what is needed
+        uint256 totalPayout = totalLevels * payoutPerLevel;
+        escrow.deposit{value: totalPayout}();
+
+    }
 }

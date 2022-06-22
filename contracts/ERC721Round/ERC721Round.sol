@@ -8,6 +8,7 @@ import "./IERC721MetadataRound.sol";
 import "./IERC721EnumerableRound.sol";
 import "./SnowballStructs.sol";
 import "../ISchneeballSchlacht.sol";
+import "../Escrow.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
@@ -56,9 +57,6 @@ abstract contract ERC721Round is
 
     // Mapping token id to token index in _tokenOwners
     mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
-
-    // Mapping from snowball ID to snowball
-    mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
     // Mapping from owner to operator approvals
     mapping(uint256 => mapping(address => mapping(address => bool)))
@@ -124,7 +122,7 @@ abstract contract ERC721Round is
     }
 
     function balanceOf(uint256 roundId, address owner)
-        external
+        public
         view
         virtual
         returns (uint256)
@@ -737,12 +735,10 @@ abstract contract ERC721Round is
         incrementRoundId();
     }
 
-    function proccesspayout() internal {
-
-    }
+    function proccesspayout() internal virtual { }
 
     function getTokensOfAddress(uint256 round, address addr) public view virtual returns (uint256[] memory) {
-        uint256 amount = balanceOf(addr);
+        uint256 amount = balanceOf(round, addr);
         uint[] memory ret = new uint[](amount);
 
         for (uint256 index = 0; index < amount; index++) {
@@ -756,18 +752,7 @@ abstract contract ERC721Round is
         return getTokensOfAddress(_roundIdCounter.current(), addr);
     }
 
-    function getSnowballsOfAddress(uint256 round, address addr) public view virtual returns (Snowball[] memory) {
-        uint256 amount = balanceOf(addr);
-        Snowball[] memory ret = new Snowball[](amount);
-
-        for (uint256 index = 0; index < amount; index++) {
-            ret[index] = _snowballs[round][_tokenOwners[round][addr][index]];
-        }
-
-        return ret;
-    }
-
-    function getSnowballsOfAddress(address addr) external view virtual returns (Snowball[] memory) {
-        return getSnowballsOfAddress(_roundIdCounter.current(), addr);
+    function getTokenOwner(uint256 round, address addr, uint256 index) public view virtual returns (uint256) {
+        return _tokenOwners[round][addr][index];
     }
 }
