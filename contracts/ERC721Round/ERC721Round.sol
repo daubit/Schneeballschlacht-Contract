@@ -466,9 +466,10 @@ abstract contract ERC721Round is
         // Clear approvals
         _approve(address(0), tokenId);
 
+        _removeOwner(owner, tokenId);
+
         _balances[roundId][owner] -= 1;
         delete _owners[roundId][tokenId];
-        _removeOwner(owner, tokenId);
 
         emit Transfer(owner, address(0), tokenId);
 
@@ -502,11 +503,12 @@ abstract contract ERC721Round is
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
 
+        _removeOwner(from, tokenId);
+
         _balances[roundId][from] -= 1;
         _balances[roundId][to] += 1;
         _owners[roundId][tokenId] = to;
 
-        _removeOwner(from, tokenId);
         _addTokenOwner(to, tokenId);
 
         emit Transfer(from, to, tokenId);
@@ -707,6 +709,7 @@ abstract contract ERC721Round is
         // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
         // then delete the last slot (swap and pop).
 
+        // assumes balance was not already decremented
         uint256 lastTokenIndex = balanceOf(from) - 1;
         uint32 round = uint32(_roundIdCounter.current());
         uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
