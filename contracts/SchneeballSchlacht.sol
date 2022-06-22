@@ -208,7 +208,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             level + 1 < MAX_LEVEL &&
             _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
-            levelup(tokenId);
+            levelup(to, tokenId);
         } else if (
             level < MAX_LEVEL &&
             _snowballs[roundId][tokenId].partners.length == level + 1
@@ -225,7 +225,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         }
     }
 
-    function levelup(uint256 tokenId) internal {
+    function levelup(address to, uint256 tokenId) internal {
         uint256 roundId = getRoundId();
         uint256 amountOldPartners = _snowballs[roundId][tokenId]
             .partners
@@ -241,6 +241,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         uint8 randLevel = _snowballs[roundId][randToken].level;
         if (randLevel + 1 < MAX_LEVEL) {
             uint256 upgradedTokenId = newTokenId();
+            _safeMint(to, upgradedTokenId);
             _snowballs[roundId][upgradedTokenId] = Snowball({
                 level: randLevel + 1,
                 partners: new uint256[](0),
