@@ -214,7 +214,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
             _snowballs[roundId][tokenId].partners.length == level + 1
         ) {
             uint256 winnerTokenId = newTokenId();
-            _safeMint(to, winnerTokenId);
+            _safeMint(msg.sender, winnerTokenId);
             _snowballs[roundId][winnerTokenId] = Snowball({
                 level: 20,
                 parentSnowballId: tokenId,
