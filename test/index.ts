@@ -42,7 +42,7 @@ describe("SchneeballSchlacht", async () => {
       const userAddress = users[0].address;
       const partnerAddress = users[1].address;
       expect(
-        schneeball.functions["safeTransferFrom(address,address,uint256)"](
+        schneeball["safeTransferFrom(address,address,uint256)"](
           userAddress,
           partnerAddress,
           1
@@ -76,7 +76,7 @@ describe("SchneeballSchlacht", async () => {
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
-      const endHeight = await schneeball.functions["getEndHeight()"]();
+      const endHeight = await schneeball["getEndHeight()"]();
       const currentHeight = await ethers.provider.getBlockNumber();
       expect(Number(endHeight)).to.be.be.greaterThan(Number(currentHeight));
     });
@@ -90,19 +90,17 @@ describe("SchneeballSchlacht", async () => {
       const userAddress = users[0].address;
       const mintTx = await schneeball.mint(userAddress, { value: MINT_FEE });
       await mintTx.wait();
-      const balance = await schneeball.functions["balanceOf(address)"](
-        userAddress
-      );
+      const balance = await schneeball["balanceOf(address)"](userAddress);
       expect(Number(balance)).to.equal(2);
 
       // Genesis snowball
-      const genesislevel = await schneeball.functions["getLevel(uint256)"](1);
+      const genesislevel = await schneeball["getLevel(uint256)"](1);
       expect(Number(genesislevel)).to.equal(1);
 
       // Minted snowball
-      const level = await schneeball.functions["getLevel(uint256)"](2);
+      const level = await schneeball["getLevel(uint256)"](2);
       expect(Number(level)).to.equal(1);
-      const totalSupply = await schneeball.functions["totalSupply()"]();
+      const totalSupply = await schneeball["totalSupply()"]();
       expect(Number(totalSupply)).to.equal(2);
     });
     it("can toss successfully", async () => {
@@ -116,24 +114,20 @@ describe("SchneeballSchlacht", async () => {
         value: TRANSFER_FEE(1),
       });
       await tossTx.wait();
-      balance = await schneeball.functions["balanceOf(address)"](
-        partnerAddress
-      );
+      balance = await schneeball["balanceOf(address)"](partnerAddress);
       expect(Number(balance)).to.equal(1);
-      balance = await schneeball.functions["balanceOf(address)"](userAddress);
+      balance = await schneeball["balanceOf(address)"](userAddress);
       expect(Number(balance)).to.equal(2);
 
       tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
         value: TRANSFER_FEE(1),
       });
       await tossTx.wait();
-      balance = await schneeball.functions["balanceOf(address)"](
-        partner2Address
-      );
+      balance = await schneeball["balanceOf(address)"](partner2Address);
       expect(Number(balance)).to.greaterThanOrEqual(1);
     });
     it("has an successful upgrade", async () => {
-      const level = (await schneeball.functions["getLevel(uint256)"](5))[0];
+      const level = await schneeball["getLevel(uint256)"](5);
       expect(level).to.be.equal(2);
     });
     it("Contract has correct amount of payout", async () => {
@@ -165,13 +159,9 @@ describe("SchneeballSchlacht", async () => {
       );
       let balance;
       await transferTx.wait();
-      balance = await schneeball.functions["balanceOf(address)"](
-        users[0].address
-      );
+      balance = await schneeball["balanceOf(address)"](users[0].address);
       expect(Number(balance)).to.equal(0);
-      balance = await schneeball.functions["balanceOf(address)"](
-        users[1].address
-      );
+      balance = await schneeball["balanceOf(address)"](users[1].address);
       expect(Number(balance)).to.equal(1);
     });
     it("can approve", async () => {
@@ -179,9 +169,7 @@ describe("SchneeballSchlacht", async () => {
         .connect(users[1])
         .approve(users[0].address, 1);
       await transferTx.wait();
-      const approvedAddress = (
-        await schneeball.functions["getApproved(uint256)"](1)
-      )[0];
+      const approvedAddress = await schneeball["getApproved(uint256)"](1);
       expect(approvedAddress).to.be.equal(users[0].address);
     });
     it("Contract has correct amount of payout", async () => {
