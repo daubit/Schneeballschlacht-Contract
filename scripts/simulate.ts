@@ -8,7 +8,7 @@
 import { randomInt } from "crypto";
 import { BigNumber, Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
-import { mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
 
 const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
@@ -97,94 +97,97 @@ async function getRandomSigner() {
   return signer;
 }
 
+async function simulateRound(id: number, schneeball: Contract) {
+  const signer = await getRandomSigner();
+  const currentAddress = signer.address;
+  const { token: tokenId, level } = await getToken(schneeball, currentAddress);
+  const canThrow = await hasTokens(schneeball, currentAddress);
+  if (canThrow && tokenId > 0) {
+    const randAddress = newPartner(currentAddress, tokenId);
+    const transferTx = await schneeball
+      .connect(signer)
+      .toss(randAddress, tokenId, {
+        value: TRANSFER_FEE(level),
+      });
+    await transferTx.wait();
+    console.log(
+      `Game ${id}:\t${currentAddress} tossed to ${randAddress} with tokenId ${tokenId} at ${level}`
+    );
+    history.push({
+      timestamp: Date.now(),
+      type: "Toss",
+      from: currentAddress,
+      to: randAddress,
+      tokenId: Number(tokenId),
+      level: level,
+    });
+  } else {
+    console.log(`Game ${id}:\t${currentAddress} minted...`);
+    const mintTx = await schneeball.connect(signer).mint(currentAddress, {
+      value: MINT_FEE,
+    });
+    await mintTx.wait();
+    history.push({
+      type: "Mint",
+      timestamp: Date.now(),
+      to: currentAddress,
+      from: undefined,
+      tokenId: undefined,
+      level: 1,
+    });
+  }
+}
+
+async function saveRound(id: number, schneeball: Contract) {
+  const roundData: any = {};
+  const winner = await schneeball["getWinner()"]();
+  const payout = await schneeball["getPayout()"]();
+  const tosses = await schneeball["totalTosses()"]();
+  const totalSupply = await schneeball["totalSupply(uint256)"](1);
+  roundData.winner = winner;
+  roundData.payout = Number(payout);
+  roundData.tosses = Number(tosses);
+  roundData.totalSupply = Number(totalSupply);
+  writeFileSync(`data/${id}/round.json`, JSON.stringify(roundData, null, 2));
+}
+
+async function saveTokens(id: number, schneeball: Contract) {
+  const total = Number(await schneeball["totalSupply()"]());
+  const addressData: { [address: string]: any[] } = {};
+  for (let i = 1; i <= total; i++) {
+    const owner = await schneeball["ownerOf(uint256)"](i);
+    const level = await getLevel(schneeball, i);
+    const entry = { tokenId: i, level: level };
+    if (addressData[owner]) {
+      addressData[owner].push(entry);
+    } else {
+      addressData[owner] = [entry];
+    }
+  }
+  writeFileSync(`data/${id}/tokens.json`, JSON.stringify(addressData, null, 2));
+}
+
+async function save(id: number, contract: Contract) {
+  saveRound(id, contract);
+  saveTokens(id, contract);
+  writeFileSync(`data/${id}/history.json`, JSON.stringify(history, null, 2));
+}
+
 async function simulate(id: number, n: number) {
   const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
-  const schneeball = await Schneeball.deploy();
+  const schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
   console.log("Contract deployed!");
-  for (let round = 1; round < n; round++) {
-    console.log(`Round ${round} started!`);
+  for (let round = 1; round <= n; round++) {
+    console.log(`Game ${id}:\tRound ${round} started!`);
     const startTx = await schneeball.startRound();
     await startTx.wait();
     while (true) {
       try {
-        const signer = await getRandomSigner();
-        const currentAddress = signer.address;
-        const { token: tokenId, level } = await getToken(
-          schneeball,
-          currentAddress
-        );
-        const canThrow = await hasTokens(schneeball, currentAddress);
-        if (canThrow && tokenId > 0) {
-          const randAddress = newPartner(currentAddress, tokenId);
-          const transferTx = await schneeball
-            .connect(signer)
-            .toss(randAddress, tokenId, {
-              value: TRANSFER_FEE(level),
-            });
-          await transferTx.wait();
-          console.log(
-            `Game ${id}:\t${currentAddress} tossed to ${randAddress} with tokenId ${tokenId} at ${level}`
-          );
-          history.push({
-            timestamp: Date.now(),
-            type: "Toss",
-            from: currentAddress,
-            to: randAddress,
-            tokenId: Number(tokenId),
-            level: level,
-          });
-        } else {
-          console.log(`Game ${id}:\t${currentAddress} minted...`);
-          const mintTx = await schneeball.connect(signer).mint(currentAddress, {
-            value: MINT_FEE,
-          });
-          await mintTx.wait();
-          history.push({
-            type: "Mint",
-            timestamp: Date.now(),
-            to: currentAddress,
-            from: undefined,
-            tokenId: undefined,
-            level: 1,
-          });
-        }
+        await simulateRound(id, schneeball);
       } catch (e: any) {
-        if (e.toString().includes("Round has finished")) {
+        if (e.toString().includes("Finished")) {
           console.log(`Game ${id} has finished`);
-          const total = Number(await schneeball["totalSupply()"]());
-          const addressData: { [address: string]: any[] } = {};
-          const roundData: any = {};
-          const winner = await schneeball["getWinner()"]();
-          const payout = await schneeball["getPayout()"]();
-          const tosses = await schneeball["totalTosses()"]();
-          const totalSupply = await schneeball["totalSupply(uint256)"](1);
-          roundData.winner = winner;
-          roundData.payout = Number(payout);
-          roundData.tosses = Number(tosses);
-          roundData.totalSupply = Number(totalSupply);
-          writeFileSync(
-            `data/${id}/round.json`,
-            JSON.stringify(roundData, null, 2)
-          );
-          writeFileSync(
-            `data/${id}/history.json`,
-            JSON.stringify(history, null, 2)
-          );
-
-          for (let i = 1; i <= total; i++) {
-            const owner = await schneeball["ownerOf(uint256)"](i);
-            const level = await getLevel(schneeball, i);
-            const entry = { tokenId: i, level: level };
-            if (addressData[owner]) {
-              addressData[owner].push(entry);
-            } else {
-              addressData[owner] = [entry];
-            }
-          }
-          writeFileSync(
-            `data/${id}/tokens.json`,
-            JSON.stringify(addressData, null, 2)
-          );
+          save(id, schneeball);
           break;
         }
       }
@@ -197,10 +200,9 @@ async function main() {
   for (const wallet of wallets) {
     addresses.push(await wallet.getAddress());
   }
-  for (let id = 1; id < 5; id++) {
-    mkdirSync(`data/${id}`);
-    await simulate(id, 2);
-  }
+  const id = Date.now() + randomInt(1000);
+  if (!existsSync(`data/${id}`)) mkdirSync(`data/${id}`);
+  simulate(id, 2);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
