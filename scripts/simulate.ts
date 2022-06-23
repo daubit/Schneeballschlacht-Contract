@@ -214,9 +214,9 @@ async function simulate(id: number, n: number) {
   console.log("Contract deployed!");
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
-    if (!existsSync(`data/${id}`)) {
-      mkdirSync(`data/${id}`);
-      if (!existsSync(`data/${id}/${round}`)) mkdirSync(`data/${id}/${round}`);
+    if (!existsSync(`data/${id}/${round}`)) {
+      mkdirSync(`data/${id}/${round}`, { recursive: true });
+      console.log(`Folder data/${id}/${round} created`);
     }
     const startTx = await schneeball.startRound();
     await startTx.wait();
@@ -243,7 +243,7 @@ async function main() {
     addresses.push(await wallet.getAddress());
   }
   const id = Date.now() + randomInt(1000);
-  simulate(id, 1);
+  simulate(id, 3);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
