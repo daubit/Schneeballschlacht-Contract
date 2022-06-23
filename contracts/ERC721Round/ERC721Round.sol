@@ -605,12 +605,8 @@ abstract contract ERC721Round is
         virtual
         returns (uint256)
     {
-        require(roundId > 1 && roundId <= getRoundId(), "Invalid id");
-        if (roundId == getRoundId()) {
-            return getTokenId();
-        } else {
-            return _rounds[roundId].totalSupply;
-        }
+        require(roundId > 0 && roundId <= getRoundId(), "Invalid id");
+        return _rounds[roundId].totalSupply;
     }
 
     function getRoundId() public view returns (uint256) {
@@ -717,12 +713,12 @@ abstract contract ERC721Round is
         uint256 total = getTokenId();
         uint256 roundId = getRoundId();
         _tokenIdCounter.reset();
-        _tokenIdCounter.increment();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
         _rounds[roundId].totalPayout = address(this).balance;
+        _rounds[roundId].totalSupply = total;
     }
 
     function processPayout() internal virtual {}
