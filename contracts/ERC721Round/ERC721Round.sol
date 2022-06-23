@@ -707,16 +707,6 @@ abstract contract ERC721Round is
         _rounds[roundId].totalSupply = total;
     }
 
-    function _processPayout()
-        internal
-        virtual
-        returns (
-            uint256,
-            uint256,
-            uint256
-        )
-    {}
-
     function getTokensOfAddress(uint256 round, address addr)
         public
         view
