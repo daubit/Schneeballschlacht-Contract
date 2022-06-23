@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: CC-BY-NC-4.0
+
 pragma solidity 0.8.15;
 
 import "./ERC721Round/ERC721Round.sol";
