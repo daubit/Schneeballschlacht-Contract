@@ -676,7 +676,6 @@ abstract contract ERC721Round is
             startHeight: block.number,
             endHeight: endHeight,
             winner: address(0),
-            escrow: address(0),
             totalSupply: 0,
             payoutPerLevel: 0,
             totalPayout: 0
@@ -724,12 +723,9 @@ abstract contract ERC721Round is
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
         _rounds[roundId].totalPayout = address(this).balance;
-        // Create Escrow Contract
-        // Send value to contract
-        // store address
     }
 
-    function proccesspayout() internal virtual {}
+    function processPayout() internal virtual {}
 
     function getTokensOfAddress(uint256 round, address addr)
         public

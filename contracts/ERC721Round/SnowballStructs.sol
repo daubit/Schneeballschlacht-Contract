@@ -2,7 +2,6 @@ pragma solidity ^0.8.0;
 
 struct Round {
     address winner;
-    address escrow;
     uint256 totalPayout;
     uint256 payoutPerLevel;
     uint256 startHeight;

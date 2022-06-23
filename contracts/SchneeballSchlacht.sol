@@ -9,7 +9,7 @@ import "./ISchneeballSchlacht.sol";
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
 contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
-    uint8 private constant MAX_LEVEL = 20;
+    uint8 private constant MAX_LEVEL = 5;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
     bool private _isLocked;
@@ -67,10 +67,8 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         uint256 roundId = getRoundId();
         uint8 level = _snowballs[roundId][tokenId].level;
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
-        require(
-            level != MAX_LEVEL || amountOfPartners <= level + 1,
-            "Cannot transfer"
-        );
+        require(level != MAX_LEVEL, "Max level reached!");
+        require(amountOfPartners < level + 1, "No throws left");
         uint256[] memory partners = _snowballs[roundId][tokenId].partners;
         for (uint256 index = 0; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
@@ -360,7 +358,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
     mapping(uint256 => Escrow) _escrow;
 
-    function proccesspayout() internal override {
+    function processPayout() internal override {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
         _escrow[round] = escrow;

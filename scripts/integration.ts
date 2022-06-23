@@ -19,7 +19,7 @@ interface Event {
   type: "Mint" | "Toss";
   tokenId: number | undefined;
   level: number | undefined;
-
+  from: string | undefined;
   to: string;
   timestamp: number;
 }
@@ -35,15 +35,28 @@ async function getLevel(contract: Contract, tokenId: number | BigNumber) {
 
 async function getMaxToken(contract: Contract, address: string) {
   const tokens = await contract["getTokensOfAddress(address)"](address);
-  let maxToken;
+  let maxToken = -1;
   let tmpLevel = 0;
+  let tmpAmount = -1;
   for (const token of tokens) {
     const level = await getLevel(contract, token);
-    if (tmpLevel < level) {
+    const partners = await contract["getPartnerTokenIds(uint256)"](token);
+    if (tmpLevel < level && partners.length < level + 1) {
       tmpLevel = level;
       maxToken = token;
+    } else if (tmpLevel === level) {
+      if (tmpAmount < 0 && partners.length < level + 1) {
+        tmpAmount = partners.length;
+        maxToken = token;
+        tmpLevel = level;
+        continue;
+      } else if (tmpAmount < partners.length && partners.length < level + 1) {
+        maxToken = token;
+        tmpAmount = partners.length;
+      }
     }
   }
+
   return { token: maxToken, level: tmpLevel };
 }
 
@@ -87,25 +100,29 @@ async function main() {
       const randIndex = randomInt(addresses.length);
       const currentAddress = addresses[randIndex];
       const signer = await ethers.getSigner(currentAddress);
-      if (await hasTokens(schneeball, currentAddress)) {
-        const { token, level } = await getMaxToken(schneeball, currentAddress);
-        const maxToken = token!.toNumber();
-        const randAddress = getRandomAddress(currentAddress, maxToken);
-        addPartner(maxToken, randAddress);
+      const { token: tokenId, level } = await getMaxToken(
+        schneeball,
+        currentAddress
+      );
+      const canThrow = await hasTokens(schneeball, currentAddress);
+      if (canThrow && tokenId > 0) {
+        const randAddress = getRandomAddress(currentAddress, tokenId);
+        addPartner(tokenId, randAddress);
         const transferTx = await schneeball
           .connect(signer)
-          .toss(randAddress, maxToken, {
+          .toss(randAddress, tokenId, {
             value: TRANSFER_FEE(level),
           });
         await transferTx.wait();
         console.log(
-          `${currentAddress} tossed to ${randAddress} with token ${token} at ${level}`
+          `${currentAddress} tossed to ${randAddress} with tokenId ${tokenId} at ${level}`
         );
         history.push({
           timestamp: Date.now(),
           type: "Toss",
+          from: currentAddress,
           to: randAddress,
-          tokenId: token,
+          tokenId: Number(tokenId),
           level: level,
         });
       } else {
@@ -118,16 +135,18 @@ async function main() {
           type: "Mint",
           timestamp: Date.now(),
           to: currentAddress,
+          from: undefined,
           tokenId: undefined,
           level: 1,
         });
       }
     } catch (e: any) {
       console.log({ e });
-      if (e.reason && e.reason.includes("Round has finished")) {
-        cleanup();
+      if (e.toString().includes("Round has finished")) {
+        console.log("Clean up!");
+        cleanup(schneeball);
+        break;
       }
-      break;
     }
   }
 
@@ -137,14 +156,16 @@ async function main() {
   const winner = await schneeball["getWinner()"]();
   const payout = await schneeball["getPayout()"]();
   const tosses = await schneeball["totalTosses()"]();
+  const totalSupply = await schneeball["totalSupply()"]();
   roundData.winner = winner;
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
+  roundData.totalSupply = Number(totalSupply);
   writeFileSync("data/round.json", JSON.stringify(roundData, null, 2));
   writeFileSync("data/history.json", JSON.stringify(history, null, 2));
 
   for (let i = 1; i <= total; i++) {
-    const owner = (await schneeball["ownerOf(uint256)"](i))[0];
+    const owner = await schneeball["ownerOf(uint256)"](i);
     const level = await getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
@@ -156,8 +177,64 @@ async function main() {
   writeFileSync("data/tokens.json", JSON.stringify(addressData, null, 2));
 }
 
-function cleanup() {
+async function cleanup(contract: Contract) {
   // TODO: Test lock on transer, mint, toss
+  const endTx = await contract["endRound()"]();
+  await endTx.wait();
+  const { token } = await getMaxToken(contract, addresses[0]);
+  try {
+    const signer = await ethers.getSigner(addresses[0]);
+    await contract.connect(signer)["mint(address)"](addresses[0]);
+    throw new Error("Mint not unlocked!");
+  } catch (e) {
+    console.log(e);
+    console.log("Mint locked!");
+  }
+  try {
+    const signer = await ethers.getSigner(addresses[0]);
+    await contract
+      .connect(signer)
+      ["toss(address,uint256)"](addresses[0], token);
+    throw new Error("toss not unlocked!");
+  } catch (e) {
+    console.log(e);
+    console.log("Toss locked!");
+  }
+  try {
+    const signer = await ethers.getSigner(addresses[0]);
+    await contract
+      .connect(signer)
+      ["transferFrom(address,address,uint256)"](
+        addresses[0],
+        addresses[1],
+        token
+      );
+    throw new Error("transferFrom not unlocked!");
+  } catch (e) {
+    console.log(e);
+    console.log("TransferFrom locked!");
+  }
+  try {
+    const signer = await ethers.getSigner(addresses[0]);
+    await contract
+      .connect(signer)
+      ["transferFrom(address,address,uint256)"](
+        addresses[0],
+        addresses[1],
+        token
+      );
+    throw new Error("safeTransferFrom not unlocked!");
+  } catch (e) {
+    console.log(e);
+    console.log("SafeTransferFrom locked!");
+  }
+  try {
+    await contract["endRound()"]();
+    throw new Error("endRound not unlocked!");
+  } catch (e: any) {
+    console.log(Object.keys(e));
+    console.log("endRound locked!");
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
