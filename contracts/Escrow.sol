@@ -15,7 +15,8 @@ contract Escrow is Ownable {
     uint256 private _round;
     ISchneeballSchlacht private _schneeballschlacht;
 
-    mapping(address => bool) private _hasDeposit;
+    // bool is false by default
+    mapping(address => bool) private _hasWithdrawn;
 
     constructor(uint256 round, ISchneeballSchlacht schneeballschlacht) {
         _round = round;
@@ -23,7 +24,9 @@ contract Escrow is Ownable {
     }
 
     function depositsOf(address payee) public view returns (uint256) {
-        if(_hasDeposit[payee]) {
+        if(_hasWithdrawn[payee] == true) {
+            return 0;
+        } else {
             uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
             Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(_round, payee);
             uint256 payout = 0;
@@ -31,23 +34,21 @@ contract Escrow is Ownable {
                 payout += tokens[index].level * payoutPerLevel; 
             }
             return payout;
-        } else {
-            return 0;
         }
     }
 
-    function deposit() public payable virtual {
+    function deposit() external payable virtual {
         // noop to deposit funds
     }
 
     // TODO: do we need onlyowner here?
-    function withdraw(address payable payee) public virtual onlyOwner {
-        require(_hasDeposit[payee] == true, "Deposit already withdrawn");
+    function withdraw(address payable payee) external onlyOwner {
+        require(_hasWithdrawn[payee] != true, "Deposit already withdrawn");
 
-        _hasDeposit[payee] = false;
         uint256 payment = depositsOf(payee);
         require(payment > 0, "No Deposit");
         payee.sendValue(payment);
+        _hasWithdrawn[payee] = true;
 
         emit Withdrawn(payee, payment);
     }

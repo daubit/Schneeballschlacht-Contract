@@ -1,10 +1,12 @@
+// SPDX-License-Identifier: CC-BY-NC-4.0
+
 pragma solidity ^0.8.0;
 
-import "./ERC721Round/IERC721Round.sol";
-import "./ERC721Round/IERC721EnumerableRound.sol";
 import "./ERC721Round/SnowballStructs.sol";
+import "./ERC721Round/IERC721RoundData.sol";
+import "./ERC721Round/IERC721EnumerableRound.sol";
 
-interface ISchneeballSchlacht is IERC721Round, IERC721EnumerableRound {
+interface ISchneeballSchlacht is IERC721RoundData, IERC721EnumerableRound {
 
     function toss(address to, uint256 tokenId) external payable;
 

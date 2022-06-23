@@ -1,14 +1,21 @@
+// SPDX-License-Identifier: CC-BY-NC-4.0
+
 pragma solidity 0.8.15;
 
 import "./ERC721Round/ERC721Round.sol";
 import "./ISchneeballSchlacht.sol";
+import "./PullPaymentRound.sol";
 
 // TODO: payout
 // TODO: maybe event
 // TODO: refactor transfer to throw func
 // TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
+contract SchneeballSchlacht is
+    ISchneeballSchlacht,
+    ERC721Round,
+    PullPaymentRound
+{
     uint8 private constant MAX_LEVEL = 5;
     uint256 private constant MINT_FEE = 0.1 ether;
     uint256 private constant TRANSFER_FEE = 0.001 ether;
@@ -256,7 +263,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override(ERC721Round) onlyUnlocked {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -264,7 +271,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override(ERC721Round) onlyUnlocked {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -273,7 +280,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override(ERC721Round) onlyUnlocked {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 
@@ -358,10 +365,18 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
 
     mapping(uint256 => Escrow) _escrow;
 
-    function processPayout() internal override {
+    function _processPayout()
+        internal
+        override
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
-        _escrow[round] = escrow;
+        _addEscrow(round, escrow);
 
         uint256 totalLevels = 0;
 
@@ -374,6 +389,8 @@ contract SchneeballSchlacht is ISchneeballSchlacht, ERC721Round {
         // because there is leftover wei we need to make sure we only transfer to escrow what is needed
         uint256 totalPayout = totalLevels * payoutPerLevel;
         escrow.deposit{value: totalPayout}();
+
+        return (totalLevels, totalPayout, payoutPerLevel);
     }
 
     function finish() internal {
