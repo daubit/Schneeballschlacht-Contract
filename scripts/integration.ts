@@ -141,7 +141,6 @@ async function main() {
         });
       }
     } catch (e: any) {
-      console.log({ e });
       if (e.toString().includes("Round has finished")) {
         console.log("Clean up!");
         cleanup(schneeball);
@@ -156,7 +155,7 @@ async function main() {
   const winner = await schneeball["getWinner()"]();
   const payout = await schneeball["getPayout()"]();
   const tosses = await schneeball["totalTosses()"]();
-  const totalSupply = await schneeball["totalSupply()"]();
+  const totalSupply = await schneeball["totalSupply(uint256)"](1);
   roundData.winner = winner;
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
@@ -232,7 +231,7 @@ async function cleanup(contract: Contract) {
     await contract["endRound()"]();
     throw new Error("endRound not unlocked!");
   } catch (e: any) {
-    console.log(Object.keys(e));
+    console.log(e);
     console.log("endRound locked!");
   }
 }
