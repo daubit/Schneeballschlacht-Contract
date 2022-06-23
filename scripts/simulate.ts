@@ -145,7 +145,7 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
   const winner = await schneeball["getWinner()"]();
   const payout = await schneeball["getPayout()"]();
   const tosses = await schneeball["totalTosses()"]();
-  const totalSupply = await schneeball["totalSupply(uint256)"](1);
+  const totalSupply = await schneeball["totalSupply()"]();
   roundData.winner = winner;
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
@@ -157,9 +157,10 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
 }
 
 async function saveTokens(id: number, schneeball: Contract, round: number) {
-  const total = Number(await schneeball["totalSupply()"]());
+  const total = await schneeball["totalSupply()"]();
   const addressData: { [address: string]: any[] } = {};
-  for (let i = 1; i <= total; i++) {
+  console.log(`Game ${id}:\tTotal supply: ${total}`);
+  for (let i = 1; i <= Number(total); i++) {
     const owner = await schneeball["ownerOf(uint256)"](i);
     const level = await getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
@@ -176,8 +177,8 @@ async function saveTokens(id: number, schneeball: Contract, round: number) {
 }
 
 async function save(id: number, contract: Contract, round: number) {
-  saveRound(id, contract, round);
-  saveTokens(id, contract, round);
+  await saveRound(id, contract, round);
+  await saveTokens(id, contract, round);
   writeFileSync(
     `data/${id}/${round}/history.json`,
     JSON.stringify(history, null, 2)
@@ -185,15 +186,19 @@ async function save(id: number, contract: Contract, round: number) {
 }
 
 async function payout(id: number, contract: Contract, round: number) {
-  const endTx = await contract["endRound()"];
+  const endTx = await contract["endRound()"]();
   await endTx.wait();
   const escrowAddress = await contract["getEscrow(uint256)"](round);
+  const balance = await ethers.provider.getBalance(escrowAddress);
+  console.log(
+    `Game ${id}:\tEscrow is at ${escrowAddress}, Balance: ${balance}`
+  );
   const Escrow = await ethers.getContractFactory("Escrow");
   const escrow = Escrow.attach(escrowAddress);
   const deposits: any = {};
   for (const address of addresses) {
-    const deposit = await escrow.depositsOf(address);
-    deposits[address] = deposit;
+    const deposit = await escrow["depositsOf(address)"](address);
+    deposits[address] = Number(deposit);
   }
   writeFileSync(
     `data/${id}/${round}/deposit.json`,
@@ -207,6 +212,10 @@ async function simulate(id: number, n: number) {
   console.log("Contract deployed!");
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
+    if (!existsSync(`data/${id}`)) {
+      mkdirSync(`data/${id}`);
+      if (!existsSync(`data/${id}/${round}`)) mkdirSync(`data/${id}/${round}`);
+    }
     const startTx = await schneeball.startRound();
     await startTx.wait();
     while (true) {
@@ -215,12 +224,11 @@ async function simulate(id: number, n: number) {
       } catch (e: any) {
         if (e.toString().includes("Finished")) {
           console.log(`Game ${id} has finished`);
-          payout(id, schneeball, round);
-          save(id, schneeball, round);
+          await payout(id, schneeball, round);
+          await save(id, schneeball, round);
           break;
-        } else {
+        } else if (e.toString().includes("revert")) {
           console.log(e);
-          throw new Error();
         }
       }
     }
@@ -233,8 +241,7 @@ async function main() {
     addresses.push(await wallet.getAddress());
   }
   const id = Date.now() + randomInt(1000);
-  if (!existsSync(`data/${id}`)) mkdirSync(`data/${id}`);
-  simulate(id, 2);
+  simulate(id, 1);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
