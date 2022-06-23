@@ -300,6 +300,7 @@ contract SchneeballSchlacht is
         override(ERC721Round, ISchneeballSchlacht)
         onlyFinished
     {
+        _processPayout();
         ERC721Round.endRound();
     }
 
