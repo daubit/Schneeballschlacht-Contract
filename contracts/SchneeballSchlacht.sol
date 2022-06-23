@@ -257,7 +257,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override onlyUnlocked {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -265,7 +265,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override onlyUnlocked {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -274,7 +274,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public virtual override(ERC721Round, IERC721Round) onlyUnlocked {
+    ) public virtual override onlyUnlocked {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 

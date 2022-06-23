@@ -39,37 +39,40 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       const balance = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance)).to.equal(1);
+      expect(Number(balance)).to.equal(2);
       const level = await schneeball.functions["getLevel(uint256)"](1);
       expect(Number(level)).to.equal(1);
       const totalSupply = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply)).to.equal(1);
+      expect(Number(totalSupply)).to.equal(2);
       // the array is inside another array for whatever reason
       const getTokensOfAddress: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress.length).to.equal(1);
+      expect(getTokensOfAddress.length).to.equal(2);
       expect(getTokensOfAddress[0].toNumber()).to.equal(1);
+      expect(getTokensOfAddress[1].toNumber()).to.equal(2);
 
       const mintTx2 = await schneeball.mint(userAddress, { value: MINT_FEE });
       await mintTx2.wait();
       const balance2 = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance2)).to.equal(2);
+      expect(Number(balance2)).to.equal(3);
       const level2 = await schneeball.functions["getLevel(uint256)"](2);
       expect(Number(level2)).to.equal(1);
       const totalSupply2 = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply2)).to.equal(2);
+      expect(Number(totalSupply2)).to.equal(3);
       const getTokensOfAddress2: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress2.length).to.equal(2);
+      expect(getTokensOfAddress2.length).to.equal(3);
+      expect(getTokensOfAddress2[0]).to.equal(1);
       expect(getTokensOfAddress2[1]).to.equal(2);
+      expect(getTokensOfAddress2[2]).to.equal(3);
     });
   });
 
@@ -98,19 +101,20 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       const balance = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance)).to.equal(1);
+      expect(Number(balance)).to.equal(2);
       const level = await schneeball.functions["getLevel(uint256)"](1);
       expect(Number(level)).to.equal(1);
       const totalSupply = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply)).to.equal(1);
+      expect(Number(totalSupply)).to.equal(2);
       // the array is inside another array for whatever reason
       const getTokensOfAddress: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress.length).to.equal(1);
+      expect(getTokensOfAddress.length).to.equal(2);
       expect(getTokensOfAddress[0].toNumber()).to.equal(1);
+      expect(getTokensOfAddress[1].toNumber()).to.equal(2);
 
       const transferTx = await schneeball.functions[
         "transferFrom(address,address,uint256)"
@@ -120,20 +124,21 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       const balance1 = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance1)).to.equal(0);
+      expect(Number(balance1)).to.equal(1);
       const balance2 = await schneeball.functions["balanceOf(address)"](
         user2Address
       );
       expect(Number(balance2)).to.equal(1);
       const totalSupply2 = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply2)).to.equal(1);
+      expect(Number(totalSupply2)).to.equal(2);
 
       const getTokensOfAddress2: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress2.length).to.equal(0);
+      expect(getTokensOfAddress2.length).to.equal(1);
+      expect(getTokensOfAddress2[0]).to.equal(2);
 
       const getTokensOfAddress3: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
@@ -174,19 +179,20 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       const balance = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance)).to.equal(3);
+      expect(Number(balance)).to.equal(4);
       const totalSupply = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply)).to.equal(3);
+      expect(Number(totalSupply)).to.equal(4);
       // the array is inside another array for whatever reason
       const getTokensOfAddress: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress.length).to.equal(3);
+      expect(getTokensOfAddress.length).to.equal(4);
       expect(getTokensOfAddress[0].toNumber()).to.equal(1);
       expect(getTokensOfAddress[1].toNumber()).to.equal(2);
       expect(getTokensOfAddress[2].toNumber()).to.equal(3);
+      expect(getTokensOfAddress[3].toNumber()).to.equal(4);
 
       const transferTx = await schneeball.functions[
         "transferFrom(address,address,uint256)"
@@ -196,22 +202,23 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       const balance1 = await schneeball.functions["balanceOf(address)"](
         userAddress
       );
-      expect(Number(balance1)).to.equal(2);
+      expect(Number(balance1)).to.equal(3);
       const balance2 = await schneeball.functions["balanceOf(address)"](
         user2Address
       );
       expect(Number(balance2)).to.equal(1);
       const totalSupply2 = await schneeball.functions["totalSupply()"]();
-      expect(Number(totalSupply2)).to.equal(3);
+      expect(Number(totalSupply2)).to.equal(4);
 
       const getTokensOfAddress2: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
           userAddress
         )) as Array<Array<BigNumber>>
       )[0];
-      expect(getTokensOfAddress2.length).to.equal(2);
+      expect(getTokensOfAddress2.length).to.equal(3);
       expect(getTokensOfAddress2[0].toNumber()).to.equal(1);
-      expect(getTokensOfAddress2[1].toNumber()).to.equal(3);
+      expect(getTokensOfAddress2[1].toNumber()).to.equal(4);
+      expect(getTokensOfAddress2[2].toNumber()).to.equal(3);
 
       const getTokensOfAddress3: Array<BigNumber> = (
         (await schneeball.functions["getTokensOfAddress(address)"](
