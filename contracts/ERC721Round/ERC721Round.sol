@@ -662,6 +662,7 @@ abstract contract ERC721Round is
             payoutPerLevel: 0,
             totalPayout: 0
         });
+        _tokenIdCounter.reset();
     }
 
     function _addTokenOwner(address to, uint256 tokenId) internal {
@@ -698,7 +699,6 @@ abstract contract ERC721Round is
     function endRound() public virtual {
         uint256 total = getTokenId();
         uint256 roundId = getRoundId();
-        _tokenIdCounter.reset();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);

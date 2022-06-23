@@ -300,8 +300,8 @@ contract SchneeballSchlacht is
         override(ERC721Round, ISchneeballSchlacht)
         onlyFinished
     {
-        _processPayout();
         ERC721Round.endRound();
+        _processPayout();
     }
 
     function totalSupply()
@@ -373,12 +373,12 @@ contract SchneeballSchlacht is
         )
     {
         uint256 round = getRoundId();
-        Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
+        Escrow escrow = new Escrow(round, this);
         _addEscrow(round, escrow);
 
         uint256 totalLevels;
 
-        for (uint256 index; index < totalSupply(round); index++) {
+        for (uint256 index = 1; index <= totalSupply(round); index++) {
             totalLevels += _snowballs[round][index].level;
         }
 
@@ -395,6 +395,6 @@ contract SchneeballSchlacht is
         lock();
         _finished = true;
         setWinner(msg.sender);
-        _HOF.mint(msg.sender);
+        // _HOF.mint(msg.sender);
     }
 }
