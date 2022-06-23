@@ -11,10 +11,6 @@ import { parseEther } from "ethers/lib/utils";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
 
-const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
-const MINT_FEE = parseEther("0.1");
-const partners: { [tokenId: number]: string[] } = {};
-const addresses: string[] = [];
 interface Event {
   type: "Mint" | "Toss";
   tokenId: number | undefined;
@@ -23,7 +19,13 @@ interface Event {
   to: string;
   timestamp: number;
 }
+
+const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
+const MINT_FEE = parseEther("0.1");
+const partners: { [tokenId: number]: string[] } = {};
+const addresses: string[] = [];
 const history: Event[] = [];
+
 async function hasTokens(contract: Contract, address: string) {
   const balance = await contract["balanceOf(address)"](address);
   return Number(balance) > 0;
@@ -173,6 +175,8 @@ async function save(id: number, contract: Contract) {
   writeFileSync(`data/${id}/history.json`, JSON.stringify(history, null, 2));
 }
 
+async function payout(id: number, contract: Contract) {}
+
 async function simulate(id: number, n: number) {
   const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
   const schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
@@ -187,8 +191,11 @@ async function simulate(id: number, n: number) {
       } catch (e: any) {
         if (e.toString().includes("Finished")) {
           console.log(`Game ${id} has finished`);
+          payout(id, schneeball);
           save(id, schneeball);
           break;
+        } else {
+          console.log(e);
         }
       }
     }
