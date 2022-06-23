@@ -140,7 +140,7 @@ async function simulateRound(id: number, schneeball: Contract) {
   }
 }
 
-async function saveRound(id: number, schneeball: Contract) {
+async function saveRound(id: number, schneeball: Contract, round: number) {
   const roundData: any = {};
   const winner = await schneeball["getWinner()"]();
   const payout = await schneeball["getPayout()"]();
@@ -150,10 +150,13 @@ async function saveRound(id: number, schneeball: Contract) {
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
   roundData.totalSupply = Number(totalSupply);
-  writeFileSync(`data/${id}/round.json`, JSON.stringify(roundData, null, 2));
+  writeFileSync(
+    `data/${id}/${round}/round.json`,
+    JSON.stringify(roundData, null, 2)
+  );
 }
 
-async function saveTokens(id: number, schneeball: Contract) {
+async function saveTokens(id: number, schneeball: Contract, round: number) {
   const total = Number(await schneeball["totalSupply()"]());
   const addressData: { [address: string]: any[] } = {};
   for (let i = 1; i <= total; i++) {
@@ -166,16 +169,37 @@ async function saveTokens(id: number, schneeball: Contract) {
       addressData[owner] = [entry];
     }
   }
-  writeFileSync(`data/${id}/tokens.json`, JSON.stringify(addressData, null, 2));
+  writeFileSync(
+    `data/${id}/${round}/tokens.json`,
+    JSON.stringify(addressData, null, 2)
+  );
 }
 
-async function save(id: number, contract: Contract) {
-  saveRound(id, contract);
-  saveTokens(id, contract);
-  writeFileSync(`data/${id}/history.json`, JSON.stringify(history, null, 2));
+async function save(id: number, contract: Contract, round: number) {
+  saveRound(id, contract, round);
+  saveTokens(id, contract, round);
+  writeFileSync(
+    `data/${id}/${round}/history.json`,
+    JSON.stringify(history, null, 2)
+  );
 }
 
-async function payout(id: number, contract: Contract) {}
+async function payout(id: number, contract: Contract, round: number) {
+  const endTx = await contract["endRound()"];
+  await endTx.wait();
+  const escrowAddress = await contract["getEscrow(uint256)"](round);
+  const Escrow = await ethers.getContractFactory("Escrow");
+  const escrow = Escrow.attach(escrowAddress);
+  const deposits: any = {};
+  for (const address of addresses) {
+    const deposit = await escrow.depositsOf(address);
+    deposits[address] = deposit;
+  }
+  writeFileSync(
+    `data/${id}/${round}/deposit.json`,
+    JSON.stringify(deposits, null, 2)
+  );
+}
 
 async function simulate(id: number, n: number) {
   const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
@@ -191,11 +215,12 @@ async function simulate(id: number, n: number) {
       } catch (e: any) {
         if (e.toString().includes("Finished")) {
           console.log(`Game ${id} has finished`);
-          payout(id, schneeball);
-          save(id, schneeball);
+          payout(id, schneeball, round);
+          save(id, schneeball, round);
           break;
         } else {
           console.log(e);
+          throw new Error();
         }
       }
     }
