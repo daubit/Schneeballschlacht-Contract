@@ -24,14 +24,17 @@ contract Escrow is Ownable {
     }
 
     function depositsOf(address payee) public view returns (uint256) {
-        if(_hasWithdrawn[payee] == true) {
+        if (_hasWithdrawn[payee] == true) {
             return 0;
         } else {
-            uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
-            Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(_round, payee);
-            uint256 payout = 0;
+            uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(
+                _round
+            );
+            Snowball[] memory tokens = _schneeballschlacht
+                .getSnowballsOfAddress(_round, payee);
+            uint256 payout;
             for (uint256 index = 0; index < tokens.length; index++) {
-                payout += tokens[index].level * payoutPerLevel; 
+                payout += tokens[index].level * payoutPerLevel;
             }
             return payout;
         }
@@ -52,5 +55,4 @@ contract Escrow is Ownable {
 
         emit Withdrawn(payee, payment);
     }
-
 }

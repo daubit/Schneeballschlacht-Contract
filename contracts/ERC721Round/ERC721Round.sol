@@ -103,10 +103,7 @@ abstract contract ERC721Round is
         override
         returns (uint256)
     {
-        require(
-            owner != address(0),
-            "ERC721: address zero is not a valid owner"
-        );
+        require(owner != address(0), "Error: zero address");
         uint256 roundId = getRoundId();
         require(roundId > 0, "No Round started yet!");
         return _balances[roundId][owner];
@@ -118,10 +115,7 @@ abstract contract ERC721Round is
         virtual
         returns (uint256)
     {
-        require(
-            owner != address(0),
-            "ERC721: address zero is not a valid owner"
-        );
+        require(owner != address(0), "Error: zero address");
         require(roundId > 0, "No Round started yet!");
         return _balances[roundId][owner];
     }
@@ -138,7 +132,7 @@ abstract contract ERC721Round is
     {
         uint256 roundId = getRoundId();
         address owner = _owners[roundId][tokenId];
-        require(owner != address(0), "ERC721: invalid token ID");
+        require(owner != address(0), "Error: Invalid token");
         require(roundId > 0, "No Round started yet!");
         return owner;
     }
@@ -149,7 +143,7 @@ abstract contract ERC721Round is
         returns (address)
     {
         address owner = _owners[roundId][tokenId];
-        require(owner != address(0), "ERC721: invalid token ID");
+        require(owner != address(0), "Error: Invalid token");
         require(roundId > 0, "No Round started yet!");
         return owner;
     }
@@ -284,7 +278,7 @@ abstract contract ERC721Round is
         //solhint-disable-next-line max-line-length
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
+            "Error: Unauthorized!"
         );
 
         _transfer(from, to, tokenId);
@@ -312,7 +306,7 @@ abstract contract ERC721Round is
     ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
+            "Error: Unauthorized!"
         );
         _safeTransfer(from, to, tokenId, data);
     }
@@ -455,11 +449,8 @@ abstract contract ERC721Round is
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(
-            ERC721Round.ownerOf(tokenId) == from,
-            "ERC721: transfer from incorrect owner"
-        );
-        require(to != address(0), "ERC721: transfer to the zero address");
+        require(ERC721Round.ownerOf(tokenId) == from, "Error: Unauthorized");
+        require(to != address(0), "Error: zero address");
         uint256 roundId = getRoundId();
         _beforeTokenTransfer(from, to, tokenId);
 
@@ -637,10 +628,6 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
-    function _duration() internal view virtual returns (uint256) {
-        return (31 days / 2 seconds);
-    }
-
     function setWinner(address winner) internal {
         uint256 roundId = getRoundId();
         _rounds[roundId].winner = winner;
@@ -665,7 +652,7 @@ abstract contract ERC721Round is
     }
 
     function startRound() public virtual {
-        uint256 endHeight = block.number + _duration();
+        uint256 endHeight = block.number + (31 days / 2 seconds);
         uint256 newRound = newRoundId();
         _rounds[newRound] = Round({
             startHeight: block.number,
@@ -739,7 +726,7 @@ abstract contract ERC721Round is
         uint256 amount = balanceOf(round, addr);
         uint256[] memory ret = new uint256[](amount);
 
-        for (uint256 index = 0; index < amount; index++) {
+        for (uint256 index; index < amount; index++) {
             ret[index] = _tokenOwners[round][addr][index];
         }
 

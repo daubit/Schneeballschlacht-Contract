@@ -5,6 +5,8 @@ pragma solidity 0.8.15;
 import "./ERC721Round/ERC721Round.sol";
 import "./ISchneeballSchlacht.sol";
 import "./PullPaymentRound.sol";
+import "./Escrow.sol";
+import "./HallOfFame.sol";
 
 // TODO: payout
 // TODO: maybe event
@@ -22,6 +24,8 @@ contract SchneeballSchlacht is
     bool private _isLocked;
     bool private _finished;
 
+    HallOfFame private _HOF;
+
     // Mapping roundId to snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
@@ -30,8 +34,9 @@ contract SchneeballSchlacht is
 
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
-    constructor() ERC721Round("SchneeballSchlacht", "Schneeball") {
+    constructor(address HOF) ERC721Round("SchneeballSchlacht", "Schneeball") {
         lock();
+        _HOF = HallOfFame(HOF);
         _finished = false;
     }
 
@@ -49,24 +54,24 @@ contract SchneeballSchlacht is
     }
 
     modifier onlyUnlocked() {
-        string memory message = "No round is running!";
+        string memory message = "Error: No round!";
         if (block.number >= getEndHeight()) {
             lock();
-            message = "End height has been reached! Round is over!";
+            message = "Error: Time limit";
         } else if (_finished) {
-            message = "Round has finished";
+            message = "Finished";
         }
         require(!_isLocked, message);
         _;
     }
 
     modifier onlyLocked() {
-        require(_isLocked, "Round is still running!");
+        require(_isLocked, "Still running!");
         _;
     }
 
     modifier onlyFinished() {
-        require(_finished, "No game has finished!");
+        require(_finished, "Finished");
         _;
     }
 
@@ -77,7 +82,7 @@ contract SchneeballSchlacht is
         require(level != MAX_LEVEL, "Max level reached!");
         require(amountOfPartners < level + 1, "No throws left");
         uint256[] memory partners = _snowballs[roundId][tokenId].partners;
-        for (uint256 index = 0; index < partners.length; index++) {
+        for (uint256 index; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
         }
         _;
@@ -133,7 +138,7 @@ contract SchneeballSchlacht is
         uint256 roundId = getRoundId();
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
+        for (uint256 i; i < amountOfPartners; i++) {
             partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         return partners;
@@ -146,7 +151,7 @@ contract SchneeballSchlacht is
     {
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i = 0; i < amountOfPartners; i++) {
+        for (uint256 i; i < amountOfPartners; i++) {
             partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         return partners;
@@ -157,8 +162,7 @@ contract SchneeballSchlacht is
      */
     function getLevel(uint256 tokenId) external view returns (uint8) {
         uint256 roundId = getRoundId();
-        uint8 level = _snowballs[roundId][tokenId].level;
-        return level;
+        return _snowballs[roundId][tokenId].level;
     }
 
     function getLevel(uint256 roundId, uint256 tokenId)
@@ -166,8 +170,7 @@ contract SchneeballSchlacht is
         view
         returns (uint8)
     {
-        uint8 level = _snowballs[roundId][tokenId].level;
-        return level;
+        return _snowballs[roundId][tokenId].level;
     }
 
     function toss(address to, uint256 tokenId)
@@ -178,12 +181,9 @@ contract SchneeballSchlacht is
         checkFee(tokenId)
         isTransferable(tokenId, to)
     {
-        require(
-            ownerOf(tokenId) == msg.sender,
-            "ERC721: transfer from incorrect owner"
-        );
-        require(to != msg.sender, "Cannot toss to yourself!");
-        require(to != address(0), "ERC721: transfer to the zero address");
+        require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
+        require(to != msg.sender, "Error: Self Toss");
+        require(to != address(0), "Error: zero address");
 
         uint256 roundId = getRoundId();
         uint8 level = _snowballs[roundId][tokenId].level;
@@ -211,7 +211,7 @@ contract SchneeballSchlacht is
             uint256 winnerTokenId = newTokenId();
             _safeMint(msg.sender, winnerTokenId);
             _snowballs[roundId][winnerTokenId] = Snowball({
-                level: 20,
+                level: MAX_LEVEL,
                 parentSnowballId: tokenId,
                 partners: new uint256[](0)
             });
@@ -226,7 +226,7 @@ contract SchneeballSchlacht is
             .partners
             .length;
         uint256[] memory partners = new uint256[](amountOldPartners + 1);
-        for (uint256 i = 0; i < amountOldPartners; i++) {
+        for (uint256 i; i < amountOldPartners; i++) {
             partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         partners[partners.length - 1] = tokenId;
@@ -347,7 +347,7 @@ contract SchneeballSchlacht is
         uint256 amount = balanceOf(round, addr);
         Snowball[] memory ret = new Snowball[](amount);
 
-        for (uint256 index = 0; index < amount; index++) {
+        for (uint256 index; index < amount; index++) {
             ret[index] = _snowballs[round][getTokenOwner(round, addr, index)];
         }
 
@@ -363,8 +363,6 @@ contract SchneeballSchlacht is
         return getSnowballsOfAddress(getRoundId(), addr);
     }
 
-    mapping(uint256 => Escrow) _escrow;
-
     function _processPayout()
         internal
         override
@@ -378,9 +376,9 @@ contract SchneeballSchlacht is
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
         _addEscrow(round, escrow);
 
-        uint256 totalLevels = 0;
+        uint256 totalLevels;
 
-        for (uint256 index = 0; index < totalSupply(round); index++) {
+        for (uint256 index; index < totalSupply(round); index++) {
             totalLevels += _snowballs[round][index].level;
         }
 
@@ -397,5 +395,6 @@ contract SchneeballSchlacht is
         lock();
         _finished = true;
         setWinner(msg.sender);
+        _HOF.mint(msg.sender);
     }
 }
