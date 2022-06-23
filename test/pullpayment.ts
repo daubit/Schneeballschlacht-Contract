@@ -12,13 +12,11 @@ type SnowballStruct = {
   parentSnowballId: PromiseOrValue<BigNumberish>;
 };
 
-describe("SchneeballSchlacht - Escrow", async () => {
+describe("SchneeballSchlacht - Pullpayment", async () => {
   let schneeball: Contract;
-  let escrow: Contract;
-  // eslint-disable-next-line no-unused-vars
   let users: SignerWithAddress[];
 
-  describe("Enumerable - Transfer flow", () => {
+  describe("Pullpayment", () => {
     before(async () => {
       // Setting up accounts
       users = await ethers.getSigners();
@@ -29,16 +27,31 @@ describe("SchneeballSchlacht - Escrow", async () => {
       );
       schneeball = await Schneeball.deploy();
       await schneeball.deployed();
+    });
+
+    it("pull payment", async () => {
+      const userAddress = users[0];
+      const PullPaymentRound = await ethers.getContractFactory(
+        "PullPaymentRoundTest"
+      );
+      const pullPaymentRound = await PullPaymentRound.deploy();
+      await pullPaymentRound.deployed();
 
       const Escrow = await ethers.getContractFactory("Escrow");
-      escrow = await Escrow.deploy(0, schneeball.address);
-      await escrow.deployed();
 
-      const depositTx = await escrow.deposit({ value: 300 });
+      const addEscrow1 = await pullPaymentRound.addEscrow(
+        1,
+        schneeball.address
+      );
+      await addEscrow1.wait();
+      const addEscrowRevert = pullPaymentRound.addEscrow(1, schneeball.address);
+      expect(addEscrowRevert).to.be.reverted;
+
+      const escrowRound1Address = await pullPaymentRound.getEscrow(1);
+      const escrowRound1 = Escrow.attach(escrowRound1Address);
+      const depositTx = await escrowRound1.deposit({ value: 300 });
       await depositTx.wait();
-    });
-    it("can start successfully", async () => {
-      const userAddress = users[0];
+
       const balls: SnowballStruct[] = [
         { level: 20, partners: [], parentSnowballId: 4 },
         { level: 19, partners: [], parentSnowballId: 3 },
@@ -46,33 +59,35 @@ describe("SchneeballSchlacht - Escrow", async () => {
         { level: 17, partners: [], parentSnowballId: 1 },
       ];
       const setSnowballsOfAddressTx = await schneeball.setSnowballsOfAddress(
-        0,
+        1,
         userAddress.address,
         balls
       );
       await setSnowballsOfAddressTx.wait();
-      const setPayoutPerLevelTx = await schneeball.setPayoutPerLevel(0, 3);
+      const setPayoutPerLevelTx = await schneeball.setPayoutPerLevel(1, 3);
       await setPayoutPerLevelTx.wait();
 
-      const depositsOf = await escrow.depositsOf(userAddress.address);
+      const depositsOf = await escrowRound1.depositsOf(userAddress.address);
       expect(Number(depositsOf)).to.be.equal(222);
-    });
+      const depositsOf2 = await pullPaymentRound.depositsOf(
+        1,
+        userAddress.address
+      );
+      expect(Number(depositsOf2)).to.be.equal(222);
 
-    it("can withdraw", async () => {
-      const userAddress = users[0];
-      const depositTx = await escrow.deposit({ value: 300 });
-      await depositTx.wait();
-
-      const widthdraw = await escrow.withdraw(userAddress.address);
+      const widthdraw = await pullPaymentRound.withdraw(1, userAddress.address);
       await widthdraw.wait();
 
-      const depositsOf = await escrow.depositsOf(userAddress.address);
-      expect(Number(depositsOf)).to.be.equal(0);
+      const depositsOf1 = await pullPaymentRound.depositsOf(
+        1,
+        userAddress.address
+      );
+      expect(Number(depositsOf1)).to.be.equal(0);
 
-      const widthdrawRevert = escrow.withdraw(userAddress.address);
+      const widthdrawRevert = pullPaymentRound.withdraw(1, userAddress.address);
       expect(widthdrawRevert).to.be.reverted;
 
-      const widthdrawRevert2 = escrow.withdraw(users[1].address);
+      const widthdrawRevert2 = pullPaymentRound.withdraw(1, users[1].address);
       expect(widthdrawRevert2).to.be.reverted;
     });
   });

@@ -349,7 +349,7 @@ contract SchneeballSchlacht is ISchneeballSchlacht, PullPaymentRound, ERC721Roun
 
     function _proccessPayout(uint256 round) internal returns(uint256,uint256,uint256) {
         Escrow escrow = new Escrow(round, ISchneeballSchlacht(address(this)));
-        addEscrow(round, escrow);
+        _addEscrow(round, escrow);
 
         uint256 totalLevels = 0;
 
