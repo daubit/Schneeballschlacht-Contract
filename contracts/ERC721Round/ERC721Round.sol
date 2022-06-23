@@ -651,6 +651,12 @@ abstract contract ERC721Round is
         return _rounds[roundId].payoutPerLevel;
     }
 
+    function setPayoutPerLevel(uint256 roundId, uint256 payoutPerLevel)
+        internal
+    {
+        _rounds[roundId].payoutPerLevel = payoutPerLevel;
+    }
+
     function startRound() public virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
         uint256 newRound = newRoundId();
