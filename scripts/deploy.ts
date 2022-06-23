@@ -9,7 +9,7 @@ import { Storage } from "./storage";
 
 async function main() {
   const network = await ethers.provider.getNetwork();
-  const storage = new Storage("contracts/addresses.json");
+  const storage = new Storage("addresses.json");
   let { sbs: sbsAddress, hof: hofAddress } = storage.fetch(network.chainId);
   const addresses: any = {};
   // We get the contract to deploy
