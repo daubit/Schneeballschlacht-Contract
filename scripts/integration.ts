@@ -141,7 +141,7 @@ async function main() {
         });
       }
     } catch (e: any) {
-      if (e.toString().includes("Round has finished")) {
+      if (e.toString().includes("Finished")) {
         console.log("Clean up!");
         cleanup(schneeball);
         break;
