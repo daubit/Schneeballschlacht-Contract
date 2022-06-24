@@ -9,8 +9,8 @@ import { randomInt } from "crypto";
 import { BigNumber, Contract } from "ethers";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
-import { Action } from "./types";
-import { TRANSFER_FEE, MINT_FEE } from "./utils";
+import { Action, ActionType } from "./types";
+import { TOSS_FEE, MINT_FEE } from "./utils";
 
 const partners: { [tokenId: number]: string[] } = {};
 const addresses: string[] = [];
@@ -103,7 +103,7 @@ async function main() {
         const transferTx = await schneeball
           .connect(signer)
           .toss(randAddress, tokenId, {
-            value: TRANSFER_FEE(level),
+            value: TOSS_FEE(level),
           });
         await transferTx.wait();
         console.log(
@@ -111,7 +111,7 @@ async function main() {
         );
         history.push({
           timestamp: Date.now(),
-          type: "Toss",
+          type: ActionType.Toss,
           from: currentAddress,
           to: randAddress,
           tokenId: Number(tokenId),
@@ -124,7 +124,7 @@ async function main() {
         });
         await mintTx.wait();
         history.push({
-          type: "Mint",
+          type: ActionType.Mint,
           timestamp: Date.now(),
           to: currentAddress,
           from: undefined,

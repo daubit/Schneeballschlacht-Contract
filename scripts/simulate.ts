@@ -10,7 +10,7 @@ import { BigNumber, Contract } from "ethers";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
 import { Action, ActionType } from "./types";
-import { MINT_FEE, TRANSFER_FEE } from "./utils";
+import { MINT_FEE, TOSS_FEE } from "./utils";
 
 const partners: { [tokenId: number]: string[] } = {};
 const addresses: string[] = [];
@@ -99,7 +99,7 @@ async function simulateRound(id: number, schneeball: Contract) {
     const transferTx = await schneeball
       .connect(signer)
       .toss(randAddress, tokenId, {
-        value: TRANSFER_FEE(level),
+        value: TOSS_FEE(level),
       });
     await transferTx.wait();
     console.log(

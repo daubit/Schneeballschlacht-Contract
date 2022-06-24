@@ -6,7 +6,7 @@ import { parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 const MINT_FEE = parseEther("0.1");
-const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(10));
+const TOSS_FEE = (level: number) => parseEther((0.001 * level).toFixed(10));
 
 describe("SchneeballSchlacht", async () => {
   let schneeball: Contract;
@@ -55,7 +55,7 @@ describe("SchneeballSchlacht", async () => {
       expect(
         schneeball
           .attach(userAddress)
-          .toss(partnerAddress, 1, { value: TRANSFER_FEE(1) })
+          .toss(partnerAddress, 1, { value: TOSS_FEE(1) })
       ).to.be.reverted;
     });
     it("endRound is locked", async () => {
@@ -111,7 +111,7 @@ describe("SchneeballSchlacht", async () => {
       let balance;
 
       tossTx = await schneeball.connect(users[0]).toss(partnerAddress, 1, {
-        value: TRANSFER_FEE(1),
+        value: TOSS_FEE(1),
       });
       await tossTx.wait();
       balance = await schneeball["balanceOf(address)"](partnerAddress);
@@ -120,7 +120,7 @@ describe("SchneeballSchlacht", async () => {
       expect(Number(balance)).to.equal(2);
 
       tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
-        value: TRANSFER_FEE(1),
+        value: TOSS_FEE(1),
       });
       await tossTx.wait();
       balance = await schneeball["balanceOf(address)"](partner2Address);
@@ -133,7 +133,7 @@ describe("SchneeballSchlacht", async () => {
     it("Contract has correct amount of payout", async () => {
       const balance = await ethers.provider.getBalance(schneeball.address);
       expect(String(balance)).to.be.eq(
-        MINT_FEE.add(TRANSFER_FEE(1).add(TRANSFER_FEE(1))).toString()
+        MINT_FEE.add(TOSS_FEE(1).add(TOSS_FEE(1))).toString()
       );
     });
   });

@@ -20,7 +20,7 @@ contract SchneeballSchlacht is
 {
     uint8 private constant MAX_LEVEL = 3;
     uint256 private constant MINT_FEE = 0.1 ether;
-    uint256 private constant TRANSFER_FEE = 0.001 ether;
+    uint256 private constant TOSS_FEE = 0.001 ether;
     bool private _isLocked;
     bool private _finished;
 
@@ -47,7 +47,7 @@ contract SchneeballSchlacht is
 
     modifier checkFee(uint256 tokenId) {
         require(
-            msg.value == TRANSFER_FEE * _snowballs[getRoundId()][tokenId].level,
+            msg.value == TOSS_FEE * _snowballs[getRoundId()][tokenId].level,
             "Insufficient fee!"
         );
         _;

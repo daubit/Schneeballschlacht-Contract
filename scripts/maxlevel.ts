@@ -1,7 +1,7 @@
 /* eslint-disable node/no-missing-import */
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
-import { TRANSFER_FEE } from "./utils";
+import { TOSS_FEE } from "./utils";
 
 const gasUsedPerLevel: { [level: number]: any[] } = {};
 const errors: any = [];
@@ -35,7 +35,7 @@ async function main() {
         const transferTx = await schneeball
           .connect(await ethers.getSigner(currentAddress))
           .toss(addresses[nextIndex], currentToken, {
-            value: TRANSFER_FEE(
+            value: TOSS_FEE(
               (
                 await schneeball.functions["getLevel(uint256)"](currentToken)
               )[0]
