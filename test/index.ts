@@ -144,6 +144,15 @@ describe("Schneeballschlacht", async () => {
     });
   });
   describe("ERC721", () => {
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy Schneeballschlacht
+      const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      await schneeball.deployed();
+    });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
