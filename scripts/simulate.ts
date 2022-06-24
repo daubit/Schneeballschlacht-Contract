@@ -12,9 +12,9 @@ import { ethers } from "hardhat";
 import { Action, ActionType } from "./types";
 import { MINT_FEE, TOSS_FEE } from "./utils";
 
-const partners: { [tokenId: number]: string[] } = {};
 const addresses: string[] = [];
-const history: Action[] = [];
+let partners: { [tokenId: number]: string[] } = {};
+let history: Action[] = [];
 
 async function hasTokens(contract: Contract, address: string) {
   const balance = await contract["balanceOf(address)"](address);
@@ -87,6 +87,17 @@ async function getRandomSigner() {
   const currentAddress = addresses[randIndex];
   const signer = await ethers.getSigner(currentAddress);
   return signer;
+}
+
+async function initRound(id: number, round: number, schneeball: Contract) {
+  if (!existsSync(`data/${id}/${round}`)) {
+    mkdirSync(`data/${id}/${round}`, { recursive: true });
+    console.log(`Folder data/${id}/${round} created`);
+  }
+  const startTx = await schneeball.startRound();
+  await startTx.wait();
+  history = [];
+  partners = {};
 }
 
 async function simulateRound(id: number, schneeball: Contract) {
@@ -204,12 +215,7 @@ async function simulate(id: number, n: number) {
   console.log("Contract deployed!");
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
-    if (!existsSync(`data/${id}/${round}`)) {
-      mkdirSync(`data/${id}/${round}`, { recursive: true });
-      console.log(`Folder data/${id}/${round} created`);
-    }
-    const startTx = await schneeball.startRound();
-    await startTx.wait();
+    await initRound(id, round, schneeball);
     while (true) {
       try {
         await simulateRound(id, schneeball);
