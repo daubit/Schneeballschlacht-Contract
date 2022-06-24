@@ -27,7 +27,7 @@ describe("Schneeballschlacht - Escrow", async () => {
       const Schneeball = await ethers.getContractFactory(
         "SchneeballSchlachtTest"
       );
-      schneeball = await Schneeball.deploy();
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
 
       const Escrow = await ethers.getContractFactory("Escrow");

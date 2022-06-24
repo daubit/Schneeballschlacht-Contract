@@ -34,7 +34,9 @@ describe("Schneeballschlacht - Pullpayment", async () => {
       const PullPaymentRound = await ethers.getContractFactory(
         "PullPaymentRoundTest"
       );
-      const pullPaymentRound = await PullPaymentRound.deploy();
+      const pullPaymentRound = await PullPaymentRound.deploy(
+        ethers.constants.AddressZero
+      );
       await pullPaymentRound.deployed();
 
       const Escrow = await ethers.getContractFactory("Escrow");

@@ -5,81 +5,20 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { randomInt } from "crypto";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "ethers";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
+import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
 import { TOSS_FEE, MINT_FEE } from "./utils";
 
-const partners: { [tokenId: number]: string[] } = {};
-const addresses: string[] = [];
 const history: Action[] = [];
-
-async function hasTokens(contract: Contract, address: string) {
-  const balance = await contract["balanceOf(address)"](address);
-  return Number(balance) > 0;
-}
-
-async function getLevel(contract: Contract, tokenId: number | BigNumber) {
-  return Number(await contract.functions["getLevel(uint256)"](tokenId));
-}
-
-async function getMaxToken(contract: Contract, address: string) {
-  const tokens = await contract["getTokensOfAddress(address)"](address);
-  let maxToken = -1;
-  let tmpLevel = 0;
-  let tmpAmount = -1;
-  for (const token of tokens) {
-    const level = await getLevel(contract, token);
-    const partners = await contract["getPartnerTokenIds(uint256)"](token);
-    if (tmpLevel < level && partners.length < level + 1) {
-      tmpLevel = level;
-      maxToken = token;
-    } else if (tmpLevel === level) {
-      if (tmpAmount < 0 && partners.length < level + 1) {
-        tmpAmount = partners.length;
-        maxToken = token;
-        tmpLevel = level;
-        continue;
-      } else if (tmpAmount < partners.length && partners.length < level + 1) {
-        maxToken = token;
-        tmpAmount = partners.length;
-      }
-    }
-  }
-
-  return { token: maxToken, level: tmpLevel };
-}
-
-function getRandomAddress(currentAddress: string, tokenId: number) {
-  const randIndex = randomInt(addresses.length);
-  let randAddress = addresses[randIndex];
-  if (!partners[tokenId]) {
-    partners[tokenId] = [];
-  }
-  while (
-    randAddress === currentAddress ||
-    partners[tokenId].includes(randAddress)
-  ) {
-    const randIndex = randomInt(addresses.length);
-    randAddress = addresses[randIndex];
-  }
-  return randAddress;
-}
-
-function addPartner(tokenId: number, address: string) {
-  if (partners[tokenId]) {
-    partners[tokenId].push(address);
-  } else {
-    partners[tokenId] = [address];
-  }
-}
+const sim = new Simulation();
 
 async function main() {
   const wallets = await ethers.getSigners();
   for (const wallet of wallets) {
-    addresses.push(await wallet.getAddress());
+    sim.addresses.push(await wallet.getAddress());
   }
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy();
@@ -89,17 +28,16 @@ async function main() {
   console.log("Round started!");
   while (true) {
     try {
-      const randIndex = randomInt(addresses.length);
-      const currentAddress = addresses[randIndex];
-      const signer = await ethers.getSigner(currentAddress);
-      const { token: tokenId, level } = await getMaxToken(
+      const signer = await sim.getRandomSigner();
+      const currentAddress = signer.address;
+      const { token: tokenId, level } = await sim.getToken(
         schneeball,
         currentAddress
       );
-      const canThrow = await hasTokens(schneeball, currentAddress);
+      const canThrow = await sim.hasTokens(schneeball, currentAddress);
       if (canThrow && tokenId > 0) {
-        const randAddress = getRandomAddress(currentAddress, tokenId);
-        addPartner(tokenId, randAddress);
+        const randAddress = sim.getRandomAddress(currentAddress, tokenId);
+        sim.addPartner(tokenId, randAddress);
         const transferTx = await schneeball
           .connect(signer)
           .toss(randAddress, tokenId, {
@@ -157,7 +95,7 @@ async function main() {
 
   for (let i = 1; i <= total; i++) {
     const owner = await schneeball["ownerOf(uint256)"](i);
-    const level = await getLevel(schneeball, i);
+    const level = await sim.getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
       addressData[owner].push(entry);
@@ -170,9 +108,10 @@ async function main() {
 
 async function cleanup(contract: Contract) {
   // TODO: Test lock on transer, mint, toss
+  const addresses = sim.addresses;
   const endTx = await contract["endRound()"]();
   await endTx.wait();
-  const { token } = await getMaxToken(contract, addresses[0]);
+  const { token } = await sim.getToken(contract, addresses[0]);
   try {
     const signer = await ethers.getSigner(addresses[0]);
     await contract.connect(signer)["mint(address)"](addresses[0]);

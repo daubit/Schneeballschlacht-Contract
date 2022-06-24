@@ -18,7 +18,7 @@ describe("Schneeballschlacht - Enumerable", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy();
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
     });
     it("can start successfully", async () => {
@@ -82,7 +82,7 @@ describe("Schneeballschlacht - Enumerable", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy();
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
     });
     it("can start successfully", async () => {
@@ -156,7 +156,7 @@ describe("Schneeballschlacht - Enumerable", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy();
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
     });
     it("can start successfully", async () => {

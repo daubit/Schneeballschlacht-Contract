@@ -6,107 +6,38 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { randomInt } from "crypto";
-import { BigNumber, Contract } from "ethers";
+import { Contract } from "ethers";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
+import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
 import { MINT_FEE, TOSS_FEE } from "./utils";
 
-const addresses: string[] = [];
-let partners: { [tokenId: number]: string[] } = {};
 let history: Action[] = [];
 
-async function hasTokens(contract: Contract, address: string) {
-  const balance = await contract["balanceOf(address)"](address);
-  return Number(balance) > 0;
-}
-
-async function getLevel(contract: Contract, tokenId: number | BigNumber) {
-  return Number(await contract.functions["getLevel(uint256)"](tokenId));
-}
-
-async function getToken(contract: Contract, address: string) {
-  const tokens = await contract["getTokensOfAddress(address)"](address);
-  let maxToken = -1;
-  let tmpLevel = 0;
-  let tmpAmount = -1;
-  for (const token of tokens) {
-    const level = await getLevel(contract, token);
-    const partners = await contract["getPartnerTokenIds(uint256)"](token);
-    if (tmpLevel < level && partners.length < level + 1) {
-      tmpLevel = level;
-      maxToken = token;
-    } else if (tmpLevel === level) {
-      if (tmpAmount < 0 && partners.length < level + 1) {
-        tmpAmount = partners.length;
-        maxToken = token;
-        tmpLevel = level;
-        continue;
-      } else if (tmpAmount < partners.length && partners.length < level + 1) {
-        maxToken = token;
-        tmpAmount = partners.length;
-      }
-    }
-  }
-
-  return { token: maxToken, level: tmpLevel };
-}
-
-function getRandomAddress(currentAddress: string, tokenId: number) {
-  const randIndex = randomInt(addresses.length);
-  let randAddress = addresses[randIndex];
-  if (!partners[tokenId]) {
-    partners[tokenId] = [];
-  }
-  while (
-    randAddress === currentAddress ||
-    partners[tokenId].includes(randAddress)
-  ) {
-    const randIndex = randomInt(addresses.length);
-    randAddress = addresses[randIndex];
-  }
-  return randAddress;
-}
-
-function addPartner(tokenId: number, address: string) {
-  if (partners[tokenId]) {
-    partners[tokenId].push(address);
-  } else {
-    partners[tokenId] = [address];
-  }
-}
-
-function newPartner(address: string, tokenId: number) {
-  const randAddress = getRandomAddress(address, tokenId);
-  addPartner(tokenId, randAddress);
-  return randAddress;
-}
-
-async function getRandomSigner() {
-  const randIndex = randomInt(addresses.length);
-  const currentAddress = addresses[randIndex];
-  const signer = await ethers.getSigner(currentAddress);
-  return signer;
-}
+const sim = new Simulation();
 
 async function initRound(id: number, round: number, schneeball: Contract) {
-  if (!existsSync(`data/${id}/${round}`)) {
-    mkdirSync(`data/${id}/${round}`, { recursive: true });
-    console.log(`Folder data/${id}/${round} created`);
+  if (!existsSync(`data/${id}/rounds/${round}`)) {
+    mkdirSync(`data/${id}/rounds/${round}`, { recursive: true });
+    console.log(`Folder data/${id}/rounds/${round} created`);
   }
   const startTx = await schneeball.startRound();
   await startTx.wait();
   history = [];
-  partners = {};
+  sim.partners = {};
 }
 
 async function simulateRound(id: number, schneeball: Contract) {
-  const signer = await getRandomSigner();
+  const signer = await sim.getRandomSigner();
   const currentAddress = signer.address;
-  const { token: tokenId, level } = await getToken(schneeball, currentAddress);
-  const canThrow = await hasTokens(schneeball, currentAddress);
+  const { token: tokenId, level } = await sim.getToken(
+    schneeball,
+    currentAddress
+  );
+  const canThrow = await sim.hasTokens(schneeball, currentAddress);
   if (canThrow && tokenId > 0) {
-    const randAddress = newPartner(currentAddress, tokenId);
+    const randAddress = sim.newPartner(currentAddress, tokenId);
     const transferTx = await schneeball
       .connect(signer)
       .toss(randAddress, tokenId, {
@@ -154,7 +85,7 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
   roundData.totalSupply = Number(totalSupply);
   roundData.payoutPerLevel = Number(payoutPerLevel);
   writeFileSync(
-    `data/${id}/${round}/round.json`,
+    `data/${id}/rounds/${round}/round.json`,
     JSON.stringify(roundData, null, 2)
   );
 }
@@ -165,7 +96,7 @@ async function saveTokens(id: number, schneeball: Contract, round: number) {
   console.log(`Game ${id}:\tTotal supply: ${total}`);
   for (let i = 1; i <= Number(total); i++) {
     const owner = await schneeball["ownerOf(uint256)"](i);
-    const level = await getLevel(schneeball, i);
+    const level = await sim.getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
       addressData[owner].push(entry);
@@ -174,7 +105,7 @@ async function saveTokens(id: number, schneeball: Contract, round: number) {
     }
   }
   writeFileSync(
-    `data/${id}/${round}/tokens.json`,
+    `data/${id}/rounds/${round}/tokens.json`,
     JSON.stringify(addressData, null, 2)
   );
 }
@@ -191,20 +122,16 @@ async function save(id: number, contract: Contract, round: number) {
 async function payout(id: number, contract: Contract, round: number) {
   const endTx = await contract["endRound()"]();
   await endTx.wait();
-  const escrowAddress = await contract["getEscrow(uint256)"](round);
-  const balance = await ethers.provider.getBalance(escrowAddress);
-  console.log(
-    `Game ${id}:\tEscrow is at ${escrowAddress}, Balance: ${balance}`
-  );
-  const Escrow = await ethers.getContractFactory("Escrow");
-  const escrow = Escrow.attach(escrowAddress);
   const deposits: any = {};
-  for (const address of addresses) {
-    const deposit = await escrow["depositsOf(address)"](address);
+  for (const address of sim.addresses) {
+    const deposit = await contract["depositsOf(uint256,address)"](
+      round,
+      address
+    );
     deposits[address] = Number(deposit);
   }
   writeFileSync(
-    `data/${id}/${round}/deposit.json`,
+    `data/${id}/rounds/${round}/deposit.json`,
     JSON.stringify(deposits, null, 2)
   );
 }
@@ -237,7 +164,7 @@ async function simulate(id: number, n: number) {
 async function main() {
   const wallets = await ethers.getSigners();
   for (const wallet of wallets) {
-    addresses.push(await wallet.getAddress());
+    sim.addresses.push(await wallet.getAddress());
   }
   const id = Date.now() + randomInt(1000);
   simulate(id, 10);

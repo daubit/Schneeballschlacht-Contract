@@ -1,35 +1,64 @@
 /* eslint-disable node/no-missing-import */
-import { readdirSync, readFileSync } from "fs";
-import { ActionType, Deposits, History, RoundMeta, Tokens } from "./types";
-import { MINT_FEE, TOSS_FEE } from "./utils";
+import { BigNumber } from "ethers";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
+import { ActionType } from "./types";
+import {
+  CSV_FOLDER,
+  DATA_FOLDER,
+  fetchRound,
+  makePath,
+  META_CSV,
+  MINT_FEE,
+  ROUNDS_FOLDER,
+  ROUND_CSV,
+  TOSS_FEE,
+} from "./utils";
 
-function fetchRound(id: number | string, round: number | string) {
-  const tokenData: Tokens = JSON.parse(
-    String(readFileSync(`data/${id}/${round}/tokens.json`))
-  );
-  const roundData: RoundMeta = JSON.parse(
-    String(readFileSync(`data/${id}/${round}/round.json`))
-  );
-  const deposits: Deposits = JSON.parse(
-    String(readFileSync(`data/${id}/${round}/deposit.json`))
-  );
-  const history: History = JSON.parse(
-    String(readFileSync(`data/${id}/${round}/history.json`))
-  );
-  return { roundData, tokenData, deposits, history };
+function median(numbers: BigNumber[]) {
+  const sorted = numbers.sort();
+  if (numbers.length % 2 === 0) {
+    const m = Math.floor(numbers.length / 2);
+    return sorted[m];
+  } else {
+    const m = Math.floor(numbers.length / 2);
+    return sorted[m].add(sorted[m + 1]).div(2);
+  }
 }
 
-function calculate(numbers: number[]) {
-  const avg = numbers.reduce((prev, curr) => prev + curr, 0) / numbers.length;
+function calculate(numbers: BigNumber[]) {
+  const avg = numbers
+    .reduce((prev, curr) => prev.add(curr), BigNumber.from(0))
+    .div(numbers.length);
+
   const max = numbers.reduce(
     (prev, curr) => (prev > curr ? prev : curr),
-    Number.MIN_SAFE_INTEGER
+    BigNumber.from(Number.MIN_SAFE_INTEGER.toString())
   );
   const min = numbers.reduce(
     (prev, curr) => (prev > curr ? curr : prev),
-    Number.MAX_SAFE_INTEGER
+    BigNumber.from(Number.MIN_SAFE_INTEGER.toString())
   );
-  return { avg, max, min };
+  return { avg, min, max };
+}
+
+function format(data: { avg: BigNumber; min: BigNumber; max: BigNumber }) {
+  const { avg, min, max } = data;
+  return {
+    avg: avg.toString(),
+    min: min.toString(),
+    max: max.toString(),
+  };
+}
+
+function formatData(
+  data: { avg: number | string; min: number | string; max: number | string },
+  descr: string | undefined
+) {
+  const { avg, min, max } = data;
+  let csv = "";
+  if (descr) csv = `Avg ${descr}, Min ${descr}, Max ${descr},\r`;
+  csv += `${avg},${min},${max}`;
+  return csv;
 }
 
 function accumulateFee(s: { fee: number; address: string }[]) {
@@ -55,29 +84,52 @@ function analyzeRound(id: number | string, round: number | string) {
   const profitsData = [];
   for (const payee in deposits) {
     const paid = totalFee[payee] || 0;
-    const deposit = deposits[payee];
-    profitsData.push(deposit - paid);
+    const profit = BigNumber.from(deposits[payee].toString()).sub(
+      paid.toString()
+    );
+    profitsData.push(profit);
   }
-  const spendings = calculate(Object.values(totalFee));
+  const spendings = calculate(
+    Object.values(totalFee).map((fee) => BigNumber.from(fee.toString()))
+  );
   const profits = calculate(profitsData);
-  return { spendings, profits };
+  const med = median(profitsData);
+
+  return { spendings, profits, median: med };
 }
 
 function main() {
-  const ids = readdirSync("data");
+  const ids = readdirSync(DATA_FOLDER);
   for (const id of ids) {
-    const rounds = readdirSync(`data/${ids}`);
+    const rounds = readdirSync(makePath(id, ROUNDS_FOLDER))
+      .map((s) => Number(s))
+      .sort((a, b) => a - b);
     const totalSupply = [];
     const tosses = [];
+    const payout = [];
+    let csv =
+      "Round,Avg Profit, Min Profit, Max Profit, Median Profit, Avg Spending, Min Spending, Max Spending,\r";
     for (const round of rounds) {
       const { roundData } = fetchRound(id, round);
-      totalSupply.push(roundData.totalSupply);
-      tosses.push(roundData.tosses);
-      analyzeRound(id, round);
-      console.log();
+      totalSupply.push(BigNumber.from(roundData.totalSupply.toString()));
+      tosses.push(BigNumber.from(roundData.tosses.toString()));
+      payout.push(BigNumber.from(roundData.payout.toString()));
+      const { spendings, profits, median } = analyzeRound(id, round);
+      const entry = `${round},${formatData(
+        format(profits),
+        undefined
+      )},${median},${formatData(format(spendings), undefined)}\r`;
+      csv += entry;
     }
-    const supplyData = calculate(totalSupply);
-    const tossData = calculate(tosses);
+    if (!existsSync(makePath(id, CSV_FOLDER)))
+      mkdirSync(makePath(id, CSV_FOLDER));
+    writeFileSync(makePath(id, CSV_FOLDER, ROUND_CSV), csv);
+    csv = formatData(format(calculate(totalSupply)), "Supply");
+    csv += "\n";
+    csv += formatData(format(calculate(tosses)), "Toss");
+    csv += "\n";
+    csv += formatData(format(calculate(payout)), "Payout");
+    writeFileSync(makePath(id, CSV_FOLDER, META_CSV), csv);
   }
 }
 
