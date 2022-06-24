@@ -18,7 +18,7 @@ contract SchneeballSchlacht is
     ERC721Round,
     PullPaymentRound
 {
-    uint8 private constant MAX_LEVEL = 20;
+    uint8 private constant MAX_LEVEL = 5;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _isLocked;
