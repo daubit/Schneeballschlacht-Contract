@@ -6,7 +6,7 @@ import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { MINT_FEE } from "../scripts/utils";
 
-describe("SchneeballSchlacht - Enumerable", async () => {
+describe("Schneeballschlacht - Enumerable", async () => {
   let schneeball: Contract;
   // eslint-disable-next-line no-unused-vars
   let users: SignerWithAddress[];
@@ -16,8 +16,8 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
-      // Deploy SchneeballSchlacht
-      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      // Deploy Schneeballschlacht
+      const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy();
       await schneeball.deployed();
     });
@@ -80,8 +80,8 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
-      // Deploy SchneeballSchlacht
-      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      // Deploy Schneeballschlacht
+      const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy();
       await schneeball.deployed();
     });
@@ -154,8 +154,8 @@ describe("SchneeballSchlacht - Enumerable", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
-      // Deploy SchneeballSchlacht
-      const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+      // Deploy Schneeballschlacht
+      const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy();
       await schneeball.deployed();
     });

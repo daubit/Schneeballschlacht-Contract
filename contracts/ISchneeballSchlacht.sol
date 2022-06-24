@@ -6,8 +6,7 @@ import "./ERC721Round/SnowballStructs.sol";
 import "./ERC721Round/IERC721RoundData.sol";
 import "./ERC721Round/IERC721EnumerableRound.sol";
 
-interface ISchneeballSchlacht is IERC721RoundData, IERC721EnumerableRound {
-
+interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
     function toss(address to, uint256 tokenId) external payable;
 
     function mint(address to) external payable;

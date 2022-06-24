@@ -81,7 +81,7 @@ async function main() {
   for (const wallet of wallets) {
     addresses.push(await wallet.getAddress());
   }
-  const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+  const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy();
   console.log("Contract deployed!");
   const startTx = await schneeball.startRound();

@@ -20,7 +20,7 @@ async function main() {
   let currentAddress = addresses[0];
   let currentToken = 1;
   console.log(`Amount of wallets: ${wallets.length}`);
-  const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+  const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy();
   const startTx = await schneeball.startRound();
   await startTx.wait();

@@ -12,7 +12,7 @@ type SnowballStruct = {
   parentSnowballId: PromiseOrValue<BigNumberish>;
 };
 
-describe("SchneeballSchlacht - Escrow", async () => {
+describe("Schneeballschlacht - Escrow", async () => {
   let schneeball: Contract;
   let escrow: Contract;
   // eslint-disable-next-line no-unused-vars
@@ -23,7 +23,7 @@ describe("SchneeballSchlacht - Escrow", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
-      // Deploy SchneeballSchlacht
+      // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory(
         "SchneeballSchlachtTest"
       );

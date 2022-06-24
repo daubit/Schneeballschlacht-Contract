@@ -210,7 +210,7 @@ async function payout(id: number, contract: Contract, round: number) {
 }
 
 async function simulate(id: number, n: number) {
-  const Schneeball = await ethers.getContractFactory("SchneeballSchlacht");
+  const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
   console.log("Contract deployed!");
   for (let round = 1; round <= n; round++) {
