@@ -1,28 +1,11 @@
-/* eslint-disable object-shorthand */
-/* eslint-disable no-unused-vars */
-/* eslint-disable node/no-unsupported-features/es-builtins */
 /* eslint-disable node/no-missing-import */
-// We require the Hardhat Runtime Environment explicitly here. This is optional
-// but useful for running the script in a standalone fashion through `node <script>`.
-//
-// When running the script with `npx hardhat run <script>` you'll find the Hardhat
-// Runtime Environment's members available in the global scope.
-import { parseEther } from "ethers/lib/utils";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
+import { TRANSFER_FEE } from "./utils";
 
-const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
 const gasUsedPerLevel: { [level: number]: any[] } = {};
 const errors: any = [];
 
-// TODO:
-//	Catch error
-// 	View Balance of Contract
-//	Question owned token upgrade
-// 	Block user
-// 	transfers => throws. TokenIds used in Game can be transfered
-//	Investigate double trans error
-// 	Investigate insufficient fee error when at level 9
 async function main() {
   const wallets = await ethers.getSigners();
   const addresses = [];

@@ -1,3 +1,4 @@
+import { assert } from "console";
 import { readFileSync, writeFileSync } from "fs";
 
 export interface AddrStorage {
@@ -9,10 +10,11 @@ export interface ChainStorage {
 }
 
 export class Storage {
-  path = "contracts/addresses.json";
-  addresses: ChainStorage;
+  private path: string;
+  private addresses: ChainStorage;
 
   constructor(filePath: string) {
+    assert(filePath.length > 0, "No file path given!");
     this.addresses = {};
     this.path = filePath;
   }

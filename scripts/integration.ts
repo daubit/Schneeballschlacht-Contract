@@ -7,23 +7,15 @@
 // Runtime Environment's members available in the global scope.
 import { randomInt } from "crypto";
 import { BigNumber, Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
+import { Action } from "./types";
+import { TRANSFER_FEE, MINT_FEE } from "./utils";
 
-const TRANSFER_FEE = (level: number) => parseEther((0.001 * level).toFixed(5));
-const MINT_FEE = parseEther("0.1");
 const partners: { [tokenId: number]: string[] } = {};
 const addresses: string[] = [];
-interface Event {
-  type: "Mint" | "Toss";
-  tokenId: number | undefined;
-  level: number | undefined;
-  from: string | undefined;
-  to: string;
-  timestamp: number;
-}
-const history: Event[] = [];
+const history: Action[] = [];
+
 async function hasTokens(contract: Contract, address: string) {
   const balance = await contract["balanceOf(address)"](address);
   return Number(balance) > 0;
