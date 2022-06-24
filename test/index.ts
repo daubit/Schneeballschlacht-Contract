@@ -128,6 +128,14 @@ describe("SchneeballSchlacht", async () => {
       const level = await schneeball["getLevel(uint256)"](5);
       expect(level).to.be.equal(2);
     });
+    it("cannot toss n + 1", async () => {
+      const partnerAddress = users[1].address;
+      expect(
+        schneeball.connect(users[0]).toss(partnerAddress, 1, {
+          value: TOSS_FEE(1),
+        })
+      ).to.be.reverted;
+    });
     it("Contract has correct amount of payout", async () => {
       const balance = await ethers.provider.getBalance(schneeball.address);
       expect(String(balance)).to.be.eq(
