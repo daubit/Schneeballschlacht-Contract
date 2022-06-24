@@ -221,6 +221,7 @@ async function simulate(id: number, n: number) {
           break;
         } else if (e.toString().includes("revert")) {
           console.log(e);
+          break;
         }
       }
     }
@@ -233,7 +234,7 @@ async function main() {
     addresses.push(await wallet.getAddress());
   }
   const id = Date.now() + randomInt(1000);
-  simulate(id, 3);
+  simulate(id, 10);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

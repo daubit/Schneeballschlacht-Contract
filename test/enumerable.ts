@@ -1,11 +1,10 @@
+/* eslint-disable node/no-missing-import */
 /* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
-import { parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
-
-const MINT_FEE = parseEther("0.1");
+import { MINT_FEE } from "../scripts/utils";
 
 describe("SchneeballSchlacht - Enumerable", async () => {
   let schneeball: Contract;
