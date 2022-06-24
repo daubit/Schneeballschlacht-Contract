@@ -6,15 +6,20 @@ export interface RoundMeta {
   payoutPerLevel: number;
 }
 
+export enum ActionType {
+  "Mint",
+  "Toss",
+}
+
 export interface Action {
-  type: "Mint" | "Toss";
+  type: ActionType;
   tokenId: number | undefined;
   level: number | undefined;
   from: string | undefined;
   to: string;
   timestamp: number;
 }
-export type History = Event[];
+export type History = Action[];
 
 export interface Deposits {
   [address: string]: number;

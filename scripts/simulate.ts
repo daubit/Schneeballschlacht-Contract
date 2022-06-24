@@ -9,7 +9,7 @@ import { randomInt } from "crypto";
 import { BigNumber, Contract } from "ethers";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
-import { Action } from "./types";
+import { Action, ActionType } from "./types";
 import { MINT_FEE, TRANSFER_FEE } from "./utils";
 
 const partners: { [tokenId: number]: string[] } = {};
@@ -107,7 +107,7 @@ async function simulateRound(id: number, schneeball: Contract) {
     );
     history.push({
       timestamp: Date.now(),
-      type: "Toss",
+      type: ActionType.Toss,
       from: currentAddress,
       to: randAddress,
       tokenId: Number(tokenId),
@@ -120,7 +120,7 @@ async function simulateRound(id: number, schneeball: Contract) {
     });
     await mintTx.wait();
     history.push({
-      type: "Mint",
+      type: ActionType.Mint,
       timestamp: Date.now(),
       to: currentAddress,
       from: undefined,
