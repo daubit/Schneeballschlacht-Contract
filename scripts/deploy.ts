@@ -22,11 +22,11 @@ async function main() {
     console.log("Hall of Fame deployed to:", hof.address);
   }
   if (!sbsAddress) {
-    const Sbs = await ethers.getContractFactory("SchneeballSchlacht");
+    const Sbs = await ethers.getContractFactory("Schneeballschlacht");
     const sbs = await Sbs.deploy(hofAddress);
     await sbs.deployed();
     addresses.sbs = sbs.address;
-    console.log("SchneeballSchlacht deployed to:", sbs.address);
+    console.log("Schneeballschlacht deployed to:", sbs.address);
   }
   storage.save(network.chainId, addresses);
 }

@@ -5,9 +5,11 @@ pragma solidity ^0.8.0;
 import "../PullPaymentRound.sol";
 
 contract PullPaymentRoundTest is PullPaymentRound {
-    mapping (uint256 => Escrow) private _escrow;
+    mapping(uint256 => Escrow) private _escrow;
 
-    function addEscrow(uint256 round, ISchneeballSchlacht schneeballschlacht) external {
+    function addEscrow(uint256 round, ISchneeballschlacht schneeballschlacht)
+        external
+    {
         _addEscrow(round, new Escrow(round, schneeballschlacht));
     }
 

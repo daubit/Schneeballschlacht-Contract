@@ -1,10 +1,10 @@
-# SchneeballSchlacht
+# Schneeballschlacht
 
 Schneeballschlacht add a Game Element to a NFT. The idea is that the NFTs are used in a Snowball fight till the round resets and a new Round begins.
 
 ## Description
 
-SchneeballSchlacht(Snowballfight) is a NFT with an associated roind. The players can throw their Snowball NFT at each other(addresses). The Snowballs level up after a certain point.
+Schneeballschlacht(Snowballfight) is a NFT with an associated roind. The players can throw their Snowball NFT at each other(addresses). The Snowballs level up after a certain point.
 The round ends if either one of the following conditions are met:
 
     1. A Snowball reaches max level

@@ -12,7 +12,7 @@ type SnowballStruct = {
   parentSnowballId: PromiseOrValue<BigNumberish>;
 };
 
-describe("SchneeballSchlacht - Pullpayment", async () => {
+describe("Schneeballschlacht - Pullpayment", async () => {
   let schneeball: Contract;
   let users: SignerWithAddress[];
 
@@ -21,7 +21,7 @@ describe("SchneeballSchlacht - Pullpayment", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
-      // Deploy SchneeballSchlacht
+      // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory(
         "SchneeballSchlachtTest"
       );

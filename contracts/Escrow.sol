@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./ISchneeballSchlacht.sol";
+import "./ISchneeballschlacht.sol";
 
 contract Escrow is Ownable {
     using Address for address payable;
@@ -13,12 +13,12 @@ contract Escrow is Ownable {
     event Withdrawn(address indexed payee, uint256 weiAmount);
 
     uint256 private _round;
-    ISchneeballSchlacht private _schneeballschlacht;
+    ISchneeballschlacht private _schneeballschlacht;
 
     // bool is false by default
     mapping(address => bool) private _hasWithdrawn;
 
-    constructor(uint256 round, ISchneeballSchlacht schneeballschlacht) {
+    constructor(uint256 round, ISchneeballschlacht schneeballschlacht) {
         _round = round;
         _schneeballschlacht = schneeballschlacht;
     }

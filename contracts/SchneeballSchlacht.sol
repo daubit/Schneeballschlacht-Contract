@@ -3,18 +3,13 @@
 pragma solidity 0.8.15;
 
 import "./ERC721Round/ERC721Round.sol";
-import "./ISchneeballSchlacht.sol";
 import "./PullPaymentRound.sol";
 import "./Escrow.sol";
 import "./HallOfFame.sol";
 
-// TODO: payout
-// TODO: maybe event
-// TODO: refactor transfer to throw func
-// TODO: refactor
 // TODO: calc ban hit when throwing snowball
-contract SchneeballSchlacht is
-    ISchneeballSchlacht,
+contract Schneeballschlacht is
+    ISchneeballschlacht,
     ERC721Round,
     PullPaymentRound
 {
@@ -34,7 +29,7 @@ contract SchneeballSchlacht is
 
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
-    constructor(address HOF) ERC721Round("SchneeballSchlacht", "Schneeball") {
+    constructor(address HOF) ERC721Round("Schneeballschlacht", "Schneeball") {
         lock();
         _HOF = HallOfFame(HOF);
         _finished = false;
@@ -286,7 +281,7 @@ contract SchneeballSchlacht is
 
     function startRound()
         public
-        override(ERC721Round, ISchneeballSchlacht)
+        override(ERC721Round, ISchneeballschlacht)
         onlyLocked
     {
         unlock();
@@ -297,7 +292,7 @@ contract SchneeballSchlacht is
 
     function endRound()
         public
-        override(ERC721Round, ISchneeballSchlacht)
+        override(ERC721Round, ISchneeballschlacht)
         onlyFinished
     {
         ERC721Round.endRound();
@@ -307,7 +302,7 @@ contract SchneeballSchlacht is
     function totalSupply()
         public
         view
-        override(ERC721Round, ISchneeballSchlacht)
+        override(ERC721Round, ISchneeballschlacht)
         returns (uint256)
     {
         return ERC721Round.totalSupply();
@@ -316,7 +311,7 @@ contract SchneeballSchlacht is
     function totalSupply(uint256 roundId)
         public
         view
-        override(ERC721Round, ISchneeballSchlacht)
+        override(ERC721Round, ISchneeballschlacht)
         returns (uint256)
     {
         return ERC721Round.totalSupply(roundId);
