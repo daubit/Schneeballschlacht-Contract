@@ -1,4 +1,5 @@
 /* eslint-disable node/no-missing-import */
+import { BigNumber, Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { readFileSync } from "fs";
 import { Deposits, RoundMeta, Tokens, History } from "./types";
@@ -44,4 +45,42 @@ export function fetchRound(id: number | string, round: number | string) {
     String(readFileSync(makePath(id, ROUNDS_FOLDER, round, HISTORY_FILE)))
   );
   return { roundData, tokenData, deposits, history };
+}
+
+export async function hasTokens(contract: Contract, address: string) {
+  const balance = await contract["balanceOf(address)"](address);
+  return Number(balance) > 0;
+}
+
+export async function getLevel(
+  contract: Contract,
+  tokenId: number | BigNumber
+) {
+  return Number(await contract.functions["getLevel(uint256)"](tokenId));
+}
+
+export async function getToken(contract: Contract, address: string) {
+  const tokens = await contract["getTokensOfAddress(address)"](address);
+  let maxToken = -1;
+  let tmpLevel = 0;
+  let tmpAmount = -1;
+  for (const token of tokens) {
+    const level = await getLevel(contract, token);
+    const partners = await contract["getPartnerTokenIds(uint256)"](token);
+    if (tmpLevel < level && partners.length < level + 1) {
+      tmpLevel = level;
+      maxToken = token;
+    } else if (tmpLevel === level) {
+      if (tmpAmount < 0 && partners.length < level + 1) {
+        tmpAmount = partners.length;
+        maxToken = token;
+        tmpLevel = level;
+        continue;
+      } else if (tmpAmount < partners.length && partners.length < level + 1) {
+        maxToken = token;
+        tmpAmount = partners.length;
+      }
+    }
+  }
+  return { token: maxToken, level: tmpLevel };
 }

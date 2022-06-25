@@ -10,7 +10,7 @@ import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
 import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
-import { TOSS_FEE, MINT_FEE } from "./utils";
+import { TOSS_FEE, MINT_FEE, getLevel, getToken, hasTokens } from "./utils";
 
 const history: Action[] = [];
 const sim = new Simulation();
@@ -30,11 +30,11 @@ async function main() {
     try {
       const signer = await sim.getRandomSigner();
       const currentAddress = signer.address;
-      const { token: tokenId, level } = await sim.getToken(
+      const { token: tokenId, level } = await getToken(
         schneeball,
         currentAddress
       );
-      const canThrow = await sim.hasTokens(schneeball, currentAddress);
+      const canThrow = await hasTokens(schneeball, currentAddress);
       if (canThrow && tokenId > 0) {
         const randAddress = sim.getRandomAddress(currentAddress, tokenId);
         sim.addPartner(tokenId, randAddress);
@@ -95,7 +95,7 @@ async function main() {
 
   for (let i = 1; i <= total; i++) {
     const owner = await schneeball["ownerOf(uint256)"](i);
-    const level = await sim.getLevel(schneeball, i);
+    const level = await getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
       addressData[owner].push(entry);
@@ -111,7 +111,7 @@ async function cleanup(contract: Contract) {
   const addresses = sim.addresses;
   const endTx = await contract["endRound()"]();
   await endTx.wait();
-  const { token } = await sim.getToken(contract, addresses[0]);
+  const { token } = await getToken(contract, addresses[0]);
   try {
     const signer = await ethers.getSigner(addresses[0]);
     await contract.connect(signer)["mint(address)"](addresses[0]);
