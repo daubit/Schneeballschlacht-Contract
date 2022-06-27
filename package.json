@@ -6,6 +6,7 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage --network development",
+    "simulate": "npx hardhat run scripts/simulate.ts --network development",
     "test": "npx hardhat test --network development"
   },
   "devDependencies": {
