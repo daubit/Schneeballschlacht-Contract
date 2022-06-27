@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
 import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
-import { MINT_FEE, TOSS_FEE } from "./utils";
+import { getLevel, getToken, hasTokens, MINT_FEE, TOSS_FEE } from "./utils";
 
 let history: Action[] = [];
 
@@ -31,11 +31,8 @@ async function initRound(id: number, round: number, schneeball: Contract) {
 async function simulateRound(id: number, schneeball: Contract) {
   const signer = await sim.getRandomSigner();
   const currentAddress = signer.address;
-  const { token: tokenId, level } = await sim.getToken(
-    schneeball,
-    currentAddress
-  );
-  const canThrow = await sim.hasTokens(schneeball, currentAddress);
+  const { token: tokenId, level } = await getToken(schneeball, currentAddress);
+  const canThrow = await hasTokens(schneeball, currentAddress);
   if (canThrow && tokenId > 0) {
     const randAddress = sim.newPartner(currentAddress, tokenId);
     const transferTx = await schneeball
@@ -96,7 +93,7 @@ async function saveTokens(id: number, schneeball: Contract, round: number) {
   console.log(`Game ${id}:\tTotal supply: ${total}`);
   for (let i = 1; i <= Number(total); i++) {
     const owner = await schneeball["ownerOf(uint256)"](i);
-    const level = await sim.getLevel(schneeball, i);
+    const level = await getLevel(schneeball, i);
     const entry = { tokenId: i, level: level };
     if (addressData[owner]) {
       addressData[owner].push(entry);

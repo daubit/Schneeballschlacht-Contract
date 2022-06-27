@@ -85,11 +85,10 @@ async function main() {
   const winner = await schneeball["getWinner()"]();
   const payout = await schneeball["getPayout()"]();
   const tosses = await schneeball["totalTosses()"]();
-  const totalSupply = await schneeball["totalSupply(uint256)"](1);
   roundData.winner = winner;
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
-  roundData.totalSupply = Number(totalSupply);
+  roundData.totalSupply = Number(total);
   writeFileSync("data/round.json", JSON.stringify(roundData, null, 2));
   writeFileSync("data/history.json", JSON.stringify(history, null, 2));
 
@@ -107,7 +106,6 @@ async function main() {
 }
 
 async function cleanup(contract: Contract) {
-  // TODO: Test lock on transer, mint, toss
   const addresses = sim.addresses;
   const endTx = await contract["endRound()"]();
   await endTx.wait();

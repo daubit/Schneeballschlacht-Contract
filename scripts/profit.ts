@@ -11,6 +11,7 @@ function calcProfit(id: number | string, round: number | string) {
       ? { fee: Number(MINT_FEE), address: action.to }
       : { fee: Number(TOSS_FEE(action.level!)), address: action.from! };
   });
+  const madeProfit = [];
   const totalFee: { [address: string]: number } = {};
   for (const { address, fee } of paidHistory) {
     if (totalFee[address]) {
@@ -23,12 +24,19 @@ function calcProfit(id: number | string, round: number | string) {
   for (const payee in deposits) {
     const paid = totalFee[payee] || 0;
     const deposit = deposits[payee];
-    console.log(
-      `Player ${payee} paid ${paid} and received ${deposit}\nPlayer earned: ${
-        (deposit - paid) / Math.pow(10, 18)
-      } MATIC`
-    );
+    // console.log(
+    //   `Player ${payee} paid ${paid} and received ${deposit}\nPlayer earned: ${
+    //     (deposit - paid) / Math.pow(10, 18)
+    //   } MATIC`
+    // );
+    madeProfit.push({ address: payee, hasProfit: deposit - paid > 0 });
   }
+  const madeProfitTotal = madeProfit.reduce(
+    (total, b) => total + Number(b.hasProfit),
+    0
+  );
+  // console.log(madeProfit);
+  console.log(`${madeProfitTotal}/${madeProfit.length} made a profit playing.`);
 }
 
 function main() {
