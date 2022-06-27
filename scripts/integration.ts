@@ -104,7 +104,7 @@ async function cleanup(contract: Contract, hof: Contract) {
     await checkLocked(signer, func, contract, ...args);
   }
   const ownerOfTx = await hof.ownerOf(1);
-  console.log(`Winner: ${ownerOfTx}`);
+  console.log(`\nWinner: ${ownerOfTx}`);
 }
 
 async function main() {
@@ -146,10 +146,10 @@ async function main() {
         });
         await mintTx.wait();
         history.push({
-          type: ActionType.Mint,
           timestamp: Date.now(),
-          to: currentAddress,
+          type: ActionType.Mint,
           from: undefined,
+          to: currentAddress,
           tokenId: undefined,
           level: 1,
         });
