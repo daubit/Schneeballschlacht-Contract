@@ -21,6 +21,16 @@ interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
         view
         returns (uint256[] memory);
 
+    function getSnowballsOfAddress(address addr)
+        external
+        view
+        returns (Snowball[] memory);
+
+    function getSnowballsOfAddress(uint256 round, address addr)
+        external
+        view
+        returns (Snowball[] memory);
+
     function getLevel(uint256 tokenId) external view returns (uint8);
 
     function getLevel(uint256 roundId, uint256 tokenId)
@@ -31,6 +41,10 @@ interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
     function totalSupply() external view returns (uint256);
 
     function totalSupply(uint256 roundId) external view returns (uint256);
+
+    function totalTosses() external view returns (uint256);
+
+    function totalTosses(uint256 roundId) external view returns (uint256);
 
     function startRound() external;
 

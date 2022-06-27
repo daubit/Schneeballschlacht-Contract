@@ -325,7 +325,6 @@ contract Schneeballschlacht is
     function getSnowballsOfAddress(uint256 round, address addr)
         public
         view
-        virtual
         returns (Snowball[] memory)
     {
         uint256 amount = balanceOf(round, addr);
@@ -343,7 +342,6 @@ contract Schneeballschlacht is
     function getSnowballsOfAddress(address addr)
         external
         view
-        virtual
         returns (Snowball[] memory)
     {
         return getSnowballsOfAddress(getRoundId(), addr);
