@@ -27,7 +27,7 @@ contract Schneeballschlacht is
     // Mapping roundId to snowball ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
-    // Mapping roundId to totalThrows
+    // Mapping roundId to totalTosses
     mapping(uint256 => uint256) private _tosses;
 
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
@@ -329,13 +329,15 @@ contract Schneeballschlacht is
         returns (Snowball[] memory)
     {
         uint256 amount = balanceOf(round, addr);
-        Snowball[] memory ret = new Snowball[](amount);
+        Snowball[] memory snowballs = new Snowball[](amount);
 
         for (uint256 index; index < amount; index++) {
-            ret[index] = _snowballs[round][getTokenOwner(round, addr, index)];
+            snowballs[index] = _snowballs[round][
+                getTokenOwner(round, addr, index)
+            ];
         }
 
-        return ret;
+        return snowballs;
     }
 
     function getSnowballsOfAddress(address addr)
