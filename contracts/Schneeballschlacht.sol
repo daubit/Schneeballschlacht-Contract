@@ -52,7 +52,7 @@ contract Schneeballschlacht is
     }
 
     modifier onlyFinished() {
-        require(!_finished, "Finished");
+        require(_finished, "Finished");
         _;
     }
 
@@ -283,7 +283,6 @@ contract Schneeballschlacht is
         _unpause();
         ERC721Round.startRound();
         _mint(msg.sender);
-        _finished = false;
     }
 
     function endRound()
@@ -291,6 +290,7 @@ contract Schneeballschlacht is
         override(ERC721Round, ISchneeballschlacht)
         onlyFinished
     {
+        _finished = false;
         ERC721Round.endRound();
         _processPayout();
     }
