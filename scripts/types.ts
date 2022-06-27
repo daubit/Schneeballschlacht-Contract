@@ -18,6 +18,7 @@ export interface Action {
   from: string | undefined;
   to: string;
   timestamp: number;
+  gasUsed: number;
 }
 export type History = Action[];
 

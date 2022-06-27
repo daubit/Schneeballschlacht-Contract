@@ -51,6 +51,7 @@ async function simulateRound(id: number, schneeball: Contract) {
       to: randAddress,
       tokenId: Number(tokenId),
       level: level,
+      gasUsed: transferTx.gasLimit.toNumber(),
     });
   } else {
     console.log(`Game ${id}:\t${currentAddress} minted...`);
@@ -65,6 +66,7 @@ async function simulateRound(id: number, schneeball: Contract) {
       from: undefined,
       tokenId: undefined,
       level: 1,
+      gasUsed: mintTx.gasLimit.toNumber(),
     });
   }
 }

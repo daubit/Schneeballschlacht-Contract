@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "../PullPaymentRound.sol";
+import "../EscrowManager.sol";
 
-contract PullPaymentRoundTest is PullPaymentRound {
+contract EscrowManagerTest is EscrowManager {
     mapping(uint256 => Escrow) private _escrow;
 
     function addEscrow(uint256 round, ISchneeballschlacht schneeballschlacht)
