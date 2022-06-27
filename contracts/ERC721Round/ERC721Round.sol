@@ -602,7 +602,7 @@ abstract contract ERC721Round is
         return _roundIdCounter.current();
     }
 
-    function newRoundId() internal returns (uint256) {
+    function _newRoundId() internal returns (uint256) {
         _roundIdCounter.increment();
         return _roundIdCounter.current();
     }
@@ -611,7 +611,7 @@ abstract contract ERC721Round is
         return _tokenIdCounter.current();
     }
 
-    function newTokenId() internal returns (uint256) {
+    function _newTokenId() internal returns (uint256) {
         _tokenIdCounter.increment();
         return _tokenIdCounter.current();
     }
@@ -627,7 +627,7 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
-    function setWinner(address winner) internal {
+    function _setWinner(address winner) internal {
         uint256 roundId = getRoundId();
         _rounds[roundId].winner = winner;
         emit Winner(roundId, winner);
@@ -650,7 +650,7 @@ abstract contract ERC721Round is
         return _rounds[roundId].payoutPerLevel;
     }
 
-    function setPayoutPerLevel(uint256 roundId, uint256 payoutPerLevel)
+    function _setPayoutPerLevel(uint256 roundId, uint256 payoutPerLevel)
         internal
     {
         _rounds[roundId].payoutPerLevel = payoutPerLevel;
@@ -658,7 +658,7 @@ abstract contract ERC721Round is
 
     function startRound() public virtual {
         uint256 endHeight = block.number + (31 days / 2 seconds);
-        uint256 newRound = newRoundId();
+        uint256 newRound = _newRoundId();
         _rounds[newRound] = Round({
             startHeight: block.number,
             endHeight: endHeight,
