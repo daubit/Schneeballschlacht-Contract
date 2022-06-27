@@ -51,7 +51,7 @@ contract Schneeballschlacht is
         _;
     }
 
-    modifier onlyFinished() {
+    modifier whenFinished() {
         require(_finished, "Finished");
         _;
     }
@@ -69,8 +69,188 @@ contract Schneeballschlacht is
         _;
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://";
+    /**
+     * @dev Returns level from the current round.
+     */
+    function getLevel(uint256 tokenId) external view returns (uint8) {
+        uint256 roundId = getRoundId();
+        return _snowballs[roundId][tokenId].level;
+    }
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8)
+    {
+        return _snowballs[roundId][tokenId].level;
+    }
+
+    function getPartnerTokenIds(uint256 tokenId)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        uint256 roundId = getRoundId();
+        return getPartnerTokenIds(roundId, tokenId);
+    }
+
+    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
+        public
+        view
+        returns (uint256[] memory)
+    {
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        uint256[] memory partners = new uint256[](amountOfPartners);
+        for (uint256 i; i < amountOfPartners; i++) {
+            partners[i] = _snowballs[roundId][tokenId].partners[i];
+        }
+        return partners;
+    }
+
+    function getSnowballsOfAddress(address addr)
+        external
+        view
+        returns (Snowball[] memory)
+    {
+        return getSnowballsOfAddress(getRoundId(), addr);
+    }
+
+    function getSnowballsOfAddress(uint256 round, address addr)
+        public
+        view
+        returns (Snowball[] memory)
+    {
+        uint256 amount = balanceOf(round, addr);
+        Snowball[] memory snowballs = new Snowball[](amount);
+
+        for (uint256 index; index < amount; index++) {
+            snowballs[index] = _snowballs[round][
+                getTokenOwner(round, addr, index)
+            ];
+        }
+
+        return snowballs;
+    }
+
+    function mint(address to) public payable whenNotPaused {
+        require(msg.value == MINT_FEE, "Insufficient fee!");
+        _mint(to);
+    }
+
+    function startRound()
+        public
+        override(ERC721Round, ISchneeballschlacht)
+        whenPaused
+    {
+        _unpause();
+        ERC721Round.startRound();
+        _mint(msg.sender);
+    }
+
+    function endRound()
+        public
+        override(ERC721Round, ISchneeballschlacht)
+        whenFinished
+    {
+        _finished = false;
+        ERC721Round.endRound();
+        _processPayout();
+    }
+
+    function toss(address to, uint256 tokenId)
+        external
+        payable
+        whenNotPaused
+        checkToken(tokenId)
+        checkFee(tokenId)
+        isTransferable(tokenId, to)
+    {
+        require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
+        require(to != msg.sender, "Error: Self Toss");
+        require(to != address(0), "Error: zero address");
+
+        uint256 roundId = getRoundId();
+        uint8 level = _snowballs[roundId][tokenId].level;
+
+        uint256 newTokenId = _newTokenId();
+        _safeMint(to, newTokenId);
+
+        _snowballs[roundId][newTokenId] = Snowball({
+            level: level,
+            parentSnowballId: tokenId,
+            partners: new uint256[](0)
+        });
+        _snowballs[roundId][tokenId].partners.push(newTokenId);
+        _tosses[roundId]++;
+        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        // Next level up also mints randomly
+        if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
+            _levelup(to, tokenId);
+        }
+        // Last snowball is minted => game is over
+        else if (level < MAX_LEVEL && amountOfPartners == level + 1) {
+            uint256 winnerTokenId = _newTokenId();
+            _safeMint(msg.sender, winnerTokenId);
+            _snowballs[roundId][winnerTokenId] = Snowball({
+                level: MAX_LEVEL,
+                parentSnowballId: tokenId,
+                partners: new uint256[](0)
+            });
+            // End Game
+            _finish();
+        }
+    }
+
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Round) whenNotPaused {
+        super.transferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public virtual override(ERC721Round) whenNotPaused {
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public virtual override(ERC721Round) whenNotPaused {
+        super.safeTransferFrom(from, to, tokenId, data);
+    }
+
+    function totalTosses() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        return _tosses[roundId];
+    }
+
+    function totalTosses(uint256 roundId) public view returns (uint256) {
+        return _tosses[roundId];
+    }
+
+    function totalSupply()
+        public
+        view
+        override(ERC721Round, ISchneeballschlacht)
+        returns (uint256)
+    {
+        return ERC721Round.totalSupply();
+    }
+
+    function totalSupply(uint256 roundId)
+        public
+        view
+        override(ERC721Round, ISchneeballschlacht)
+        returns (uint256)
+    {
+        return ERC721Round.totalSupply(roundId);
     }
 
     function tokenURI(uint256 tokenId)
@@ -116,101 +296,6 @@ contract Schneeballschlacht is
         });
     }
 
-    function mint(address to) public payable whenNotPaused {
-        require(msg.value == MINT_FEE, "Insufficient fee!");
-        _mint(to);
-    }
-
-    function getPartnerTokenIds(uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256 roundId = getRoundId();
-        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i; i < amountOfPartners; i++) {
-            partners[i] = _snowballs[roundId][tokenId].partners[i];
-        }
-        return partners;
-    }
-
-    function getPartnerTokenIds(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
-        uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i; i < amountOfPartners; i++) {
-            partners[i] = _snowballs[roundId][tokenId].partners[i];
-        }
-        return partners;
-    }
-
-    /**
-     * @dev Returns level from the current round.
-     */
-    function getLevel(uint256 tokenId) external view returns (uint8) {
-        uint256 roundId = getRoundId();
-        return _snowballs[roundId][tokenId].level;
-    }
-
-    function getLevel(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint8)
-    {
-        return _snowballs[roundId][tokenId].level;
-    }
-
-    function toss(address to, uint256 tokenId)
-        external
-        payable
-        whenNotPaused
-        checkToken(tokenId)
-        checkFee(tokenId)
-        isTransferable(tokenId, to)
-    {
-        require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
-        require(to != msg.sender, "Error: Self Toss");
-        require(to != address(0), "Error: zero address");
-
-        uint256 roundId = getRoundId();
-        uint8 level = _snowballs[roundId][tokenId].level;
-
-        uint256 newToken = _newTokenId();
-        _safeMint(to, newToken);
-
-        _snowballs[roundId][newToken] = Snowball({
-            level: level,
-            parentSnowballId: tokenId,
-            partners: new uint256[](0)
-        });
-        _snowballs[roundId][tokenId].partners.push(newToken);
-        _tosses[roundId]++;
-
-        if (
-            level + 1 < MAX_LEVEL &&
-            _snowballs[roundId][tokenId].partners.length == level + 1
-        ) {
-            _levelup(to, tokenId);
-        } else if (
-            level < MAX_LEVEL &&
-            _snowballs[roundId][tokenId].partners.length == level + 1
-        ) {
-            uint256 winnerTokenId = _newTokenId();
-            _safeMint(msg.sender, winnerTokenId);
-            _snowballs[roundId][winnerTokenId] = Snowball({
-                level: MAX_LEVEL,
-                parentSnowballId: tokenId,
-                partners: new uint256[](0)
-            });
-            // End Game
-            _finish();
-        }
-    }
-
     function _levelup(address to, uint256 tokenId) internal {
         uint256 roundId = getRoundId();
         uint256 amountOldPartners = _snowballs[roundId][tokenId]
@@ -250,103 +335,6 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override(ERC721Round) whenNotPaused {
-        super.transferFrom(from, to, tokenId);
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override(ERC721Round) whenNotPaused {
-        super.safeTransferFrom(from, to, tokenId);
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public virtual override(ERC721Round) whenNotPaused {
-        super.safeTransferFrom(from, to, tokenId, data);
-    }
-
-    function startRound()
-        public
-        override(ERC721Round, ISchneeballschlacht)
-        whenPaused
-    {
-        _unpause();
-        ERC721Round.startRound();
-        _mint(msg.sender);
-    }
-
-    function endRound()
-        public
-        override(ERC721Round, ISchneeballschlacht)
-        onlyFinished
-    {
-        _finished = false;
-        ERC721Round.endRound();
-        _processPayout();
-    }
-
-    function totalSupply()
-        public
-        view
-        override(ERC721Round, ISchneeballschlacht)
-        returns (uint256)
-    {
-        return ERC721Round.totalSupply();
-    }
-
-    function totalSupply(uint256 roundId)
-        public
-        view
-        override(ERC721Round, ISchneeballschlacht)
-        returns (uint256)
-    {
-        return ERC721Round.totalSupply(roundId);
-    }
-
-    function totalTosses() public view returns (uint256) {
-        uint256 roundId = getRoundId();
-        return _tosses[roundId];
-    }
-
-    function totalTosses(uint256 roundId) public view returns (uint256) {
-        return _tosses[roundId];
-    }
-
-    function getSnowballsOfAddress(uint256 round, address addr)
-        public
-        view
-        returns (Snowball[] memory)
-    {
-        uint256 amount = balanceOf(round, addr);
-        Snowball[] memory snowballs = new Snowball[](amount);
-
-        for (uint256 index; index < amount; index++) {
-            snowballs[index] = _snowballs[round][
-                getTokenOwner(round, addr, index)
-            ];
-        }
-
-        return snowballs;
-    }
-
-    function getSnowballsOfAddress(address addr)
-        external
-        view
-        returns (Snowball[] memory)
-    {
-        return getSnowballsOfAddress(getRoundId(), addr);
-    }
-
     function _processPayout() internal {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, this);
@@ -371,5 +359,9 @@ contract Schneeballschlacht is
         _finished = true;
         _setWinner(msg.sender);
         _HOF.mint(msg.sender);
+    }
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://";
     }
 }

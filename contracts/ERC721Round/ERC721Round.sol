@@ -584,6 +584,37 @@ abstract contract ERC721Round is
         uint256 tokenId
     ) internal virtual {}
 
+    function _addTokenOwner(address to, uint256 tokenId) internal {
+        // assumes that balanceOf was already increased
+        uint256 length = balanceOf(to) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        _tokenOwners[round][to][length] = tokenId;
+        _tokenOwnersIndex[round][tokenId] = length;
+    }
+
+    // adapted from from _removeTokenFromOwnerEnumeration (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol)
+    function _removeOwner(address from, uint256 tokenId) internal {
+        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        // assumes balance was not already decremented
+        uint256 lastTokenIndex = balanceOf(from) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = _tokenOwners[round][from][lastTokenIndex];
+
+            _tokenOwners[round][from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            _tokenOwnersIndex[round][lastTokenId] = tokenIndex; // Update the moved token's index
+        }
+
+        // This also deletes the contents at the last position of the array
+        delete _tokenOwnersIndex[round][tokenId];
+        delete _tokenOwners[round][from][lastTokenIndex];
+    }
+
     function totalSupply() public view virtual returns (uint256) {
         return getTokenId();
     }
@@ -627,12 +658,6 @@ abstract contract ERC721Round is
         return _rounds[roundId].endHeight;
     }
 
-    function _setWinner(address winner) internal {
-        uint256 roundId = getRoundId();
-        _rounds[roundId].winner = winner;
-        emit Winner(roundId, winner);
-    }
-
     function getWinner() public view returns (address) {
         uint256 roundId = getRoundId();
         return _rounds[roundId].winner;
@@ -640,6 +665,12 @@ abstract contract ERC721Round is
 
     function getWinner(uint256 roundId) public view returns (address) {
         return _rounds[roundId].winner;
+    }
+
+    function _setWinner(address winner) internal {
+        uint256 roundId = getRoundId();
+        _rounds[roundId].winner = winner;
+        emit Winner(roundId, winner);
     }
 
     function getPayoutPerLevel(uint256 roundId)
@@ -668,37 +699,6 @@ abstract contract ERC721Round is
             totalPayout: 0
         });
         _tokenIdCounter.reset();
-    }
-
-    function _addTokenOwner(address to, uint256 tokenId) internal {
-        // assumes that balanceOf was already increased
-        uint256 length = balanceOf(to) - 1;
-        uint32 round = uint32(_roundIdCounter.current());
-        _tokenOwners[round][to][length] = tokenId;
-        _tokenOwnersIndex[round][tokenId] = length;
-    }
-
-    // adapted from from _removeTokenFromOwnerEnumeration (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol)
-    function _removeOwner(address from, uint256 tokenId) internal {
-        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
-        // then delete the last slot (swap and pop).
-
-        // assumes balance was not already decremented
-        uint256 lastTokenIndex = balanceOf(from) - 1;
-        uint32 round = uint32(_roundIdCounter.current());
-        uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
-
-        // When the token to delete is the last token, the swap operation is unnecessary
-        if (tokenIndex != lastTokenIndex) {
-            uint256 lastTokenId = _tokenOwners[round][from][lastTokenIndex];
-
-            _tokenOwners[round][from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
-            _tokenOwnersIndex[round][lastTokenId] = tokenIndex; // Update the moved token's index
-        }
-
-        // This also deletes the contents at the last position of the array
-        delete _tokenOwnersIndex[round][tokenId];
-        delete _tokenOwners[round][from][lastTokenIndex];
     }
 
     function endRound() public virtual {

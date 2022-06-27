@@ -7,9 +7,20 @@ import "./ERC721Round/IERC721RoundData.sol";
 import "./ERC721Round/IERC721EnumerableRound.sol";
 
 interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
+    function startRound() external;
+
+    function endRound() external;
+
     function toss(address to, uint256 tokenId) external payable;
 
     function mint(address to) external payable;
+
+    function getLevel(uint256 tokenId) external view returns (uint8);
+
+    function getLevel(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (uint8);
 
     function getPartnerTokenIds(uint256 tokenId)
         external
@@ -31,13 +42,6 @@ interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
         view
         returns (Snowball[] memory);
 
-    function getLevel(uint256 tokenId) external view returns (uint8);
-
-    function getLevel(uint256 roundId, uint256 tokenId)
-        external
-        view
-        returns (uint8);
-
     function totalSupply() external view returns (uint256);
 
     function totalSupply(uint256 roundId) external view returns (uint256);
@@ -45,8 +49,4 @@ interface ISchneeballschlacht is IERC721RoundData, IERC721EnumerableRound {
     function totalTosses() external view returns (uint256);
 
     function totalTosses(uint256 roundId) external view returns (uint256);
-
-    function startRound() external;
-
-    function endRound() external;
 }
