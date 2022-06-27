@@ -32,7 +32,7 @@ describe("Schneeballschlacht - Pullpayment", async () => {
     it("pull payment", async () => {
       const userAddress = users[0];
       const PullPaymentRound = await ethers.getContractFactory(
-        "PullPaymentRoundTest"
+        "EscrowManagerTest"
       );
       const pullPaymentRound = await PullPaymentRound.deploy();
       await pullPaymentRound.deployed();
