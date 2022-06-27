@@ -72,10 +72,9 @@ export async function getToken(contract: Contract, address: string) {
       maxToken = token;
     } else if (tmpLevel === level) {
       if (tmpAmount < 0 && partners.length < level + 1) {
-        tmpAmount = partners.length;
-        maxToken = token;
         tmpLevel = level;
-        continue;
+        maxToken = token;
+        tmpAmount = partners.length;
       } else if (tmpAmount < partners.length && partners.length < level + 1) {
         maxToken = token;
         tmpAmount = partners.length;
