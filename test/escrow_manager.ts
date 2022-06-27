@@ -12,7 +12,7 @@ type SnowballStruct = {
   parentSnowballId: PromiseOrValue<BigNumberish>;
 };
 
-describe("Schneeballschlacht - Pullpayment", async () => {
+describe("Schneeballschlacht - EscrowManager", async () => {
   let schneeball: Contract;
   let users: SignerWithAddress[];
 
@@ -31,23 +31,20 @@ describe("Schneeballschlacht - Pullpayment", async () => {
 
     it("pull payment", async () => {
       const userAddress = users[0];
-      const PullPaymentRound = await ethers.getContractFactory(
+      const EscrowManager = await ethers.getContractFactory(
         "EscrowManagerTest"
       );
-      const pullPaymentRound = await PullPaymentRound.deploy();
-      await pullPaymentRound.deployed();
+      const escrowManager = await EscrowManager.deploy();
+      await escrowManager.deployed();
 
       const Escrow = await ethers.getContractFactory("Escrow");
 
-      const addEscrow1 = await pullPaymentRound.addEscrow(
-        1,
-        schneeball.address
-      );
+      const addEscrow1 = await escrowManager.addEscrow(1, schneeball.address);
       await addEscrow1.wait();
-      const addEscrowRevert = pullPaymentRound.addEscrow(1, schneeball.address);
+      const addEscrowRevert = escrowManager.addEscrow(1, schneeball.address);
       expect(addEscrowRevert).to.be.reverted;
 
-      const escrowRound1Address = await pullPaymentRound.getEscrow(1);
+      const escrowRound1Address = await escrowManager.getEscrow(1);
       const escrowRound1 = Escrow.attach(escrowRound1Address);
       const depositTx = await escrowRound1.deposit({ value: 300 });
       await depositTx.wait();
@@ -69,22 +66,22 @@ describe("Schneeballschlacht - Pullpayment", async () => {
 
       const depositsOf = await escrowRound1.depositsOf(userAddress.address);
       expect(Number(depositsOf)).to.be.equal(222);
-      const depositsOf2 = await pullPaymentRound.depositsOf(
+      const depositsOf2 = await escrowManager.depositsOf(
         1,
         userAddress.address
       );
       expect(Number(depositsOf2)).to.be.equal(222);
 
-      const widthdraw = await pullPaymentRound.withdraw(1, userAddress.address);
+      const widthdraw = await escrowManager.withdraw(1, userAddress.address);
       await widthdraw.wait();
 
-      const depositsOf1 = pullPaymentRound.depositsOf(1, userAddress.address);
+      const depositsOf1 = escrowManager.depositsOf(1, userAddress.address);
       expect(depositsOf1).to.be.reverted;
 
-      const widthdrawRevert = pullPaymentRound.withdraw(1, userAddress.address);
+      const widthdrawRevert = escrowManager.withdraw(1, userAddress.address);
       expect(widthdrawRevert).to.be.reverted;
 
-      const widthdrawRevert2 = pullPaymentRound.withdraw(1, users[1].address);
+      const widthdrawRevert2 = escrowManager.withdraw(1, users[1].address);
       expect(widthdrawRevert2).to.be.reverted;
     });
   });

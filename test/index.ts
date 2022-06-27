@@ -196,7 +196,7 @@ describe("Schneeballschlacht", async () => {
       ](1, 1);
       expect(
         partnerIdsAndRoundsId.map((ids: BigNumber) => Number(ids))
-      ).to.have.same.members([3, 4]);
+      ).to.have.same.members([4, 3]);
     });
   });
   describe("ERC721", () => {

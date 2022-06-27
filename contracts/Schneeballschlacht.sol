@@ -17,7 +17,7 @@ contract Schneeballschlacht is
     Pausable
 {
     using Strings for uint8;
-    uint8 private constant MAX_LEVEL = 2;
+    uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
