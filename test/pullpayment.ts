@@ -78,11 +78,8 @@ describe("Schneeballschlacht - Pullpayment", async () => {
       const widthdraw = await pullPaymentRound.withdraw(1, userAddress.address);
       await widthdraw.wait();
 
-      // const depositsOf1 = await pullPaymentRound.depositsOf(
-      //   1,
-      //   userAddress.address
-      // );
-      // expect(Number(depositsOf1)).to.be.equal(0);
+      const depositsOf1 = pullPaymentRound.depositsOf(1, userAddress.address);
+      expect(depositsOf1).to.be.reverted;
 
       const widthdrawRevert = pullPaymentRound.withdraw(1, userAddress.address);
       expect(widthdrawRevert).to.be.reverted;

@@ -6,6 +6,7 @@ import "./ERC721Round/ERC721Round.sol";
 import "./PullPaymentRound.sol";
 import "./Escrow.sol";
 import "./HallOfFame.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 // TODO: calc ban hit when throwing snowball
 contract Schneeballschlacht is
@@ -13,6 +14,7 @@ contract Schneeballschlacht is
     ERC721Round,
     PullPaymentRound
 {
+    using Strings for uint8;
     uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
@@ -83,6 +85,10 @@ contract Schneeballschlacht is
         _;
     }
 
+    function _baseURI() internal pure override returns (string memory) {
+        return "ipfs://";
+    }
+
     function tokenURI(uint256 tokenId)
         public
         view
@@ -93,7 +99,10 @@ contract Schneeballschlacht is
         uint256 roundId = getRoundId();
         return
             string(
-                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+                abi.encodePacked(
+                    _baseURI(),
+                    _snowballs[roundId][tokenId].level.toString()
+                )
             );
     }
 
@@ -105,7 +114,10 @@ contract Schneeballschlacht is
     {
         return
             string(
-                abi.encodePacked(_baseURI(), _snowballs[roundId][tokenId].level)
+                abi.encodePacked(
+                    _baseURI(),
+                    _snowballs[roundId][tokenId].level.toString()
+                )
             );
     }
 

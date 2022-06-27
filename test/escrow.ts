@@ -66,8 +66,8 @@ describe("Schneeballschlacht - Escrow", async () => {
       const widthdraw = await escrow.withdraw(userAddress);
       await widthdraw.wait();
 
-      // const depositsOf = await escrow.depositsOf(userAddress);
-      // expect(Number(depositsOf)).to.be.equal(0);
+      const depositsOf = escrow.depositsOf(userAddress);
+      expect(depositsOf).to.be.reverted;
 
       const widthdrawRevert = escrow.withdraw(userAddress);
       expect(widthdrawRevert).to.be.reverted;

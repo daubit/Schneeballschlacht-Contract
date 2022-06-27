@@ -124,6 +124,12 @@ describe("Schneeballschlacht", async () => {
       balance = await schneeball["balanceOf(address)"](partner2Address);
       expect(Number(balance)).to.greaterThanOrEqual(1);
     });
+    it("CANNOT toss other users snowball", async () => {
+      const tossTx = schneeball.connect(users[1]).toss(users[2].address, 1, {
+        value: TOSS_FEE(1),
+      });
+      expect(tossTx).to.be.reverted;
+    });
     it("has an successful upgrade", async () => {
       const level = await schneeball["getLevel(uint256)"](5);
       expect(level).to.be.equal(2);
@@ -141,6 +147,11 @@ describe("Schneeballschlacht", async () => {
       expect(String(balance)).to.be.eq(
         MINT_FEE.add(TOSS_FEE(1).add(TOSS_FEE(1))).toString()
       );
+    });
+    it("Token has correct tokenURI", async () => {
+      const tokenURI = await schneeball["tokenURI(uint256)"](1);
+      const tokenLevel = await schneeball["getLevel(uint256)"](1);
+      expect(tokenURI).to.be.equal(`ipfs://${tokenLevel}`);
     });
   });
   describe("ERC721", () => {
@@ -181,6 +192,14 @@ describe("Schneeballschlacht", async () => {
     it("Contract has correct amount of payout", async () => {
       const balance = await ethers.provider.getBalance(schneeball.address);
       expect(String(balance)).to.be.eq("0");
+    });
+    it("user can throw transfered token", async () => {
+      const partnerAddress = users[1].address;
+      expect(
+        schneeball.connect(users[0]).toss(partnerAddress, 1, {
+          value: TOSS_FEE(1),
+        })
+      ).to.not.be.reverted;
     });
   });
 });
