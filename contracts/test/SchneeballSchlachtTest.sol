@@ -29,6 +29,10 @@ contract SchneeballSchlachtTest is ISchneeballschlacht {
         returns (uint8)
     {}
 
+    function totalTosses() external view returns (uint256) {}
+
+    function totalTosses(uint256 roundId) external view returns (uint256) {}
+
     function totalSupply() external view returns (uint256) {}
 
     function totalSupply(uint256 roundId) external view returns (uint256) {}
