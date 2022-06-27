@@ -5,6 +5,7 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Contract } from "ethers";
 import { writeFileSync } from "fs";
 import { ethers } from "hardhat";
@@ -14,17 +15,100 @@ import { TOSS_FEE, MINT_FEE, getLevel, getToken, hasTokens } from "./utils";
 
 const history: Action[] = [];
 const sim = new Simulation();
+const MINTER_ROLE =
+  "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
 
-async function main() {
+async function deploy() {
   const wallets = await ethers.getSigners();
   for (const wallet of wallets) {
     sim.addresses.push(await wallet.getAddress());
   }
+  const Hof = await ethers.getContractFactory("HallOfFame");
+  const hof = await Hof.deploy();
+  console.log("HallOfFame deployed!");
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy();
-  console.log("Contract deployed!");
+  const schneeball = await Schneeball.deploy(hof.address);
+  console.log("Schneeballschlacht deployed!");
+  const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
+  await grantRoleTx.wait();
+  console.log("Schneeballschlacht has been granted MINTER_ROLE");
   const startTx = await schneeball.startRound();
   await startTx.wait();
+  return { schneeball, hof };
+}
+
+async function save(schneeball: Contract) {
+  const total = Number(await schneeball["totalSupply()"]());
+  const addressData: { [address: string]: any[] } = {};
+  const roundData: any = {};
+  const winner = await schneeball["getWinner()"]();
+  const payout = await schneeball["getPayout()"]();
+  const tosses = await schneeball["totalTosses()"]();
+  roundData.winner = winner;
+  roundData.payout = Number(payout);
+  roundData.tosses = Number(tosses);
+  roundData.totalSupply = Number(total);
+  writeFileSync("data/round.json", JSON.stringify(roundData, null, 2));
+  writeFileSync("data/history.json", JSON.stringify(history, null, 2));
+
+  for (let i = 1; i <= total; i++) {
+    const owner = await schneeball["ownerOf(uint256)"](i);
+    const level = await getLevel(schneeball, i);
+    const entry = { tokenId: i, level: level };
+    if (addressData[owner]) {
+      addressData[owner].push(entry);
+    } else {
+      addressData[owner] = [entry];
+    }
+  }
+  writeFileSync("data/tokens.json", JSON.stringify(addressData, null, 2));
+}
+
+async function checkLocked(
+  signer: SignerWithAddress,
+  func: string,
+  contract: Contract,
+  ...param: any
+) {
+  const funcName = func.split("(")[0];
+  try {
+    await contract.connect(signer)[func](...param);
+    throw new Error(`${funcName} not unlocked!`);
+  } catch (e) {
+    console.log(e);
+    console.log(`${funcName} locked!`);
+  }
+}
+
+async function cleanup(contract: Contract, hof: Contract) {
+  const addresses = sim.addresses;
+  const endTx = await contract["endRound()"]();
+  await endTx.wait();
+  const { token } = await getToken(contract, addresses[0]);
+  const funcs = [
+    { func: "toss(address,uint256)", args: [addresses[0], token] },
+    { func: "mint(address)", args: [addresses[0]] },
+    {
+      func: "transferFrom(address,address,uint256)",
+      args: [addresses[0], addresses[1], token],
+    },
+    {
+      func: "safeTransferFrom(address,address,uint256)",
+      args: [addresses[0], addresses[1], token],
+    },
+    { func: "endRound()", args: [] },
+  ];
+  const signer = await ethers.getSigner(addresses[0]);
+  for (const funcObj of funcs) {
+    const { func, args } = funcObj;
+    await checkLocked(signer, func, contract, ...args);
+  }
+  const ownerOfTx = await hof.ownerOf(1);
+  console.log(`Winner: ${ownerOfTx}`);
+}
+
+async function main() {
+  const { schneeball, hof } = await deploy();
   console.log("Round started!");
   while (true) {
     try {
@@ -71,97 +155,15 @@ async function main() {
         });
       }
     } catch (e: any) {
-      if (e.toString().includes("Finished")) {
+      if (e.toString().includes("Pausable: paused")) {
         console.log("Clean up!");
-        cleanup(schneeball);
+        await cleanup(schneeball, hof);
+        await save(schneeball);
         break;
+      } else {
+        console.log(e);
       }
     }
-  }
-
-  const total = Number(await schneeball["totalSupply()"]());
-  const addressData: { [address: string]: any[] } = {};
-  const roundData: any = {};
-  const winner = await schneeball["getWinner()"]();
-  const payout = await schneeball["getPayout()"]();
-  const tosses = await schneeball["totalTosses()"]();
-  roundData.winner = winner;
-  roundData.payout = Number(payout);
-  roundData.tosses = Number(tosses);
-  roundData.totalSupply = Number(total);
-  writeFileSync("data/round.json", JSON.stringify(roundData, null, 2));
-  writeFileSync("data/history.json", JSON.stringify(history, null, 2));
-
-  for (let i = 1; i <= total; i++) {
-    const owner = await schneeball["ownerOf(uint256)"](i);
-    const level = await getLevel(schneeball, i);
-    const entry = { tokenId: i, level: level };
-    if (addressData[owner]) {
-      addressData[owner].push(entry);
-    } else {
-      addressData[owner] = [entry];
-    }
-  }
-  writeFileSync("data/tokens.json", JSON.stringify(addressData, null, 2));
-}
-
-async function cleanup(contract: Contract) {
-  const addresses = sim.addresses;
-  const endTx = await contract["endRound()"]();
-  await endTx.wait();
-  const { token } = await getToken(contract, addresses[0]);
-  try {
-    const signer = await ethers.getSigner(addresses[0]);
-    await contract.connect(signer)["mint(address)"](addresses[0]);
-    throw new Error("Mint not unlocked!");
-  } catch (e) {
-    console.log(e);
-    console.log("Mint locked!");
-  }
-  try {
-    const signer = await ethers.getSigner(addresses[0]);
-    await contract
-      .connect(signer)
-      ["toss(address,uint256)"](addresses[0], token);
-    throw new Error("toss not unlocked!");
-  } catch (e) {
-    console.log(e);
-    console.log("Toss locked!");
-  }
-  try {
-    const signer = await ethers.getSigner(addresses[0]);
-    await contract
-      .connect(signer)
-      ["transferFrom(address,address,uint256)"](
-        addresses[0],
-        addresses[1],
-        token
-      );
-    throw new Error("transferFrom not unlocked!");
-  } catch (e) {
-    console.log(e);
-    console.log("TransferFrom locked!");
-  }
-  try {
-    const signer = await ethers.getSigner(addresses[0]);
-    await contract
-      .connect(signer)
-      ["transferFrom(address,address,uint256)"](
-        addresses[0],
-        addresses[1],
-        token
-      );
-    throw new Error("safeTransferFrom not unlocked!");
-  } catch (e) {
-    console.log(e);
-    console.log("SafeTransferFrom locked!");
-  }
-  try {
-    await contract["endRound()"]();
-    throw new Error("endRound not unlocked!");
-  } catch (e: any) {
-    console.log(e);
-    console.log("endRound locked!");
   }
 }
 

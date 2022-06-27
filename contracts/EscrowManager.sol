@@ -4,16 +4,19 @@ pragma solidity ^0.8.0;
 
 import "./Escrow.sol";
 
-contract PullPaymentRound {
-    mapping (uint256 => Escrow) private _escrow;
+contract EscrowManager {
+    mapping(uint256 => Escrow) private _escrow;
 
     function _addEscrow(uint256 round, Escrow escrow) internal {
-        require(_escrow[round] == Escrow(address(0x0)), "Escrow alread exists");
+        require(
+            _escrow[round] == Escrow(address(0x0)),
+            "Escrow already exists"
+        );
 
         _escrow[round] = escrow;
     }
 
-    function getEscrow(uint256 round) public view returns(Escrow) {
+    function getEscrow(uint256 round) public view returns (Escrow) {
         return _escrow[round];
     }
 
@@ -21,7 +24,11 @@ contract PullPaymentRound {
         _escrow[round].withdraw(payee);
     }
 
-    function depositsOf(uint256 round, address payee) external view returns(uint256) {
+    function depositsOf(uint256 round, address payee)
+        external
+        view
+        returns (uint256)
+    {
         return _escrow[round].depositsOf(payee);
     }
 }

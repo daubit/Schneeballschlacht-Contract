@@ -3,7 +3,7 @@
 pragma solidity 0.8.15;
 
 import "./ERC721Round/ERC721Round.sol";
-import "./PullPaymentRound.sol";
+import "./EscrowManager.sol";
 import "./Escrow.sol";
 import "./HallOfFame.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -13,11 +13,11 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
-    PullPaymentRound,
+    EscrowManager,
     Pausable
 {
     using Strings for uint8;
-    uint8 private constant MAX_LEVEL = 20;
+    uint8 private constant MAX_LEVEL = 2;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
@@ -52,7 +52,7 @@ contract Schneeballschlacht is
     }
 
     modifier onlyFinished() {
-        require(_finished, "Finished");
+        require(!_finished, "Finished");
         _;
     }
 
@@ -372,6 +372,6 @@ contract Schneeballschlacht is
         _pause();
         _finished = true;
         _setWinner(msg.sender);
-        // _HOF.mint(msg.sender);
+        _HOF.mint(msg.sender);
     }
 }
