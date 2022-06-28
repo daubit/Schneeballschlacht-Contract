@@ -667,7 +667,12 @@ abstract contract ERC721Round is
         return _rounds[roundId].winner;
     }
 
+    function getWinnerBonus(uint256 roundId) public view returns (uint256) {
+        return _rounds[roundId].winnerBonus;
+    }
+
     function _setWinner(address winner) internal {
+        require(winner != address(0), "null address");
         uint256 roundId = getRoundId();
         _rounds[roundId].winner = winner;
         emit Winner(roundId, winner);
@@ -696,20 +701,22 @@ abstract contract ERC721Round is
             winner: address(0),
             totalSupply: 0,
             payoutPerLevel: 0,
-            totalPayout: 0
+            totalPayout: 0,
+            winnerBonus: 0
         });
         _tokenIdCounter.reset();
     }
 
-    function endRound() public virtual {
+    function _endRound(uint256 totalPayout, uint256 winnerBonus) internal {
         uint256 total = getTokenId();
         uint256 roundId = getRoundId();
 
         for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
             emit Transfer(ownerOf(tokenId), address(0), tokenId);
         }
-        _rounds[roundId].totalPayout = address(this).balance;
+        _rounds[roundId].totalPayout = totalPayout;
         _rounds[roundId].totalSupply = total;
+        _rounds[roundId].winnerBonus = winnerBonus;
     }
 
     function getTokensOfAddress(uint256 round, address addr)

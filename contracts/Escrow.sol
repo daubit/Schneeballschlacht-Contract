@@ -3,11 +3,10 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./ISchneeballschlacht.sol";
 
-contract Escrow is Ownable {
+contract Escrow {
     using Address for address payable;
 
     event Withdrawn(address indexed payee, uint256 weiAmount);
@@ -25,6 +24,7 @@ contract Escrow is Ownable {
 
     function depositsOf(address payee) public view returns (uint256) {
         require(!_hasWithdrawn[payee], "Already withdrawed");
+        require(payee != address(0), "null address");
         uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
         Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(
             _round,
@@ -34,6 +34,9 @@ contract Escrow is Ownable {
         for (uint256 index; index < tokens.length; index++) {
             payout += tokens[index].level * payoutPerLevel;
         }
+        if(_schneeballschlacht.getWinner(_round) == payee) {
+            payout += _schneeballschlacht.getWinnerBonus(_round) * payoutPerLevel;
+        }
         return payout;
     }
 
@@ -41,8 +44,7 @@ contract Escrow is Ownable {
         // noop to deposit funds
     }
 
-    // TODO: do we need onlyowner here?
-    function withdraw(address payable payee) external onlyOwner {
+    function withdraw(address payable payee) external {
         require(_hasWithdrawn[payee] != true, "Deposit already withdrawn");
 
         uint256 payment = depositsOf(payee);
