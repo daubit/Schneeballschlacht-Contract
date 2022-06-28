@@ -9,6 +9,7 @@ struct Round {
     uint256 startHeight;
     uint256 endHeight;
     uint256 totalSupply;
+    uint256 winnerBonus;
 }
 
 struct Snowball {

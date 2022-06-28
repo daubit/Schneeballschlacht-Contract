@@ -98,4 +98,8 @@ contract SchneeballSchlachtTest is ISchneeballschlacht {
     function setPayoutPerLevel(uint256 roundId, uint256 amount) external {
         _payoutPerLevel[roundId] = amount;
     }
+
+    function getWinner(uint256 roundId) public view returns (address) {}
+
+    function getWinnerBonus(uint256 roundId) public view returns (uint256) {}
 }

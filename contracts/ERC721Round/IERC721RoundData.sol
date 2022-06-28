@@ -10,4 +10,8 @@ interface IERC721RoundData {
     function getEndHeight(uint256 roundId) external view returns (uint256);
 
     function getPayoutPerLevel(uint256 roundId) external view returns (uint256);
+    
+    function getWinner(uint256 roundId) external view returns (address);
+    
+    function getWinnerBonus(uint256 roundId) external view returns (uint256);
 }

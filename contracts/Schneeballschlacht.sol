@@ -149,12 +149,14 @@ contract Schneeballschlacht is
 
     function endRound()
         public
-        override(ERC721Round, ISchneeballschlacht)
+        override(ISchneeballschlacht)
         whenFinished
     {
         _finished = false;
-        ERC721Round.endRound();
-        _processPayout();
+        uint256 totalPayout;
+        uint256 bonusLevels;
+        (totalPayout, bonusLevels) = _processPayout();
+        _endRound(totalPayout, bonusLevels);
     }
 
     function toss(address to, uint256 tokenId)
@@ -335,7 +337,7 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
-    function _processPayout() internal {
+    function _processPayout() internal returns(uint256, uint256) {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, this);
         _addEscrow(round, escrow);
@@ -346,12 +348,16 @@ contract Schneeballschlacht is
             totalLevels += _snowballs[round][index].level;
         }
 
+        // 1% of totalLevels are a winner bonus
+        uint256 bonusLevelsForWinner = totalLevels / 100;
+        totalLevels += bonusLevelsForWinner;
         // max totalLevels wei are leftover each round for the next round
         uint256 payoutPerLevel = address(this).balance / totalLevels;
         // because there is leftover wei we need to make sure we only transfer to escrow what is needed
         uint256 totalPayout = totalLevels * payoutPerLevel;
         escrow.deposit{value: totalPayout}();
         _setPayoutPerLevel(round, payoutPerLevel);
+        return (totalPayout, bonusLevelsForWinner);
     }
 
     function _finish() internal {
