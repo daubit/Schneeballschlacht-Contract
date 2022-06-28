@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./SnowballStructs.sol";
+import "../SnowballStructs.sol";
 
 interface IERC721EnumerableRound {
     function getTokensOfAddress(address addr)

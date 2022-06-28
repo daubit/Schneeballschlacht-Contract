@@ -16,3 +16,9 @@ struct Snowball {
     uint256[] partners;
     uint256 parentSnowballId;
 }
+
+struct Query {
+    address player;
+    uint8 level;
+    uint256 tokenId;
+}

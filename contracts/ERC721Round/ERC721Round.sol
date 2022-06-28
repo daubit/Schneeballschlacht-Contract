@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 import "./IERC721Round.sol";
 import "./IERC721MetadataRound.sol";
 import "./IERC721EnumerableRound.sol";
-import "./SnowballStructs.sol";
+import "../SnowballStructs.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";

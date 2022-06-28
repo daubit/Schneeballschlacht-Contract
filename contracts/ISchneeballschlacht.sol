@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./ERC721Round/SnowballStructs.sol";
+import "./SnowballStructs.sol";
 import "./ERC721Round/IERC721RoundData.sol";
 import "./ERC721Round/IERC721EnumerableRound.sol";
 
