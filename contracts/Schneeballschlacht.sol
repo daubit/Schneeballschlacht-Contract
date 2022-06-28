@@ -17,14 +17,14 @@ contract Schneeballschlacht is
     Pausable
 {
     using Strings for uint8;
-    uint8 private constant MAX_LEVEL = 20;
+    uint8 private constant MAX_LEVEL = 5;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
 
     HallOfFame private _HOF;
 
-    // Mapping roundId to snowball ID to snowball
+    // Mapping roundId to tokenId ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
     // Mapping roundId to totalTosses
@@ -358,10 +358,44 @@ contract Schneeballschlacht is
         _pause();
         _finished = true;
         _setWinner(msg.sender);
-        _HOF.mint(msg.sender);
+        // _HOF.mint(msg.sender);
     }
 
     function _baseURI() internal pure override returns (string memory) {
         return "ipfs://";
+    }
+
+    function getTokens(uint256 page, uint256 amount)
+        external
+        view
+        returns (Query[] memory)
+    {
+        uint256 roundId = getRoundId();
+        return getTokens(roundId, page, amount);
+    }
+
+    function getTokens(
+        uint256 roundId,
+        uint256 page,
+        uint256 amount
+    ) public view returns (Query[] memory) {
+        require(amount > 0, "");
+        uint256 total = totalSupply(roundId);
+        Query[] memory result = new Query[](0);
+        uint256 from = amount * page + 1;
+        require(from < total, "Out of bounds!");
+        uint256 to = from + amount <= total ? from + amount : total;
+        uint256 i;
+        for (uint256 index = from; index <= to; index++) {
+            uint8 level = _snowballs[roundId][index].level;
+            address player = ownerOf(index);
+            Query memory query = Query({
+                player: player,
+                tokenId: index,
+                level: level
+            });
+            result[i++] = query;
+        }
+        return result;
     }
 }
