@@ -24,9 +24,9 @@ function calcProfit(id: number | string, round: number | string) {
     const paid = totalFee[payee] || 0;
     const deposit = deposits[payee];
     console.log(
-      `Player ${payee} paid ${paid} and received ${deposit}\nPlayer earned: ${
-        (deposit - paid) / Math.pow(10, 18)
-      } MATIC`
+      `Player ${payee} paid ${paid / Math.pow(10, 18)} and received ${
+        deposit / Math.pow(10, 18)
+      }\nPlayer earned: ${(deposit - paid) / Math.pow(10, 18)} MATIC`
     );
   }
 }

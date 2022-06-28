@@ -138,6 +138,7 @@ async function main() {
           to: randAddress,
           tokenId: Number(tokenId),
           level: level,
+          gasUsed: transferTx.gasLimit.toNumber(),
         });
       } else {
         console.log(`${currentAddress} minted...`);
@@ -152,6 +153,7 @@ async function main() {
           to: currentAddress,
           tokenId: undefined,
           level: 1,
+          gasUsed: mintTx.gasLimit.toNumber(),
         });
       }
     } catch (e: any) {
@@ -159,10 +161,10 @@ async function main() {
         console.log("Clean up!");
         await cleanup(schneeball, hof);
         await save(schneeball);
-        break;
       } else {
         console.log(e);
       }
+      break;
     }
   }
 }

@@ -166,7 +166,7 @@ async function main() {
     sim.addresses.push(await wallet.getAddress());
   }
   const id = Date.now() + randomInt(1000);
-  simulate(id, 10);
+  simulate(id, 1);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
