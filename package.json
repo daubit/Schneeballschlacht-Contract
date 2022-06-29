@@ -1,8 +1,7 @@
 {
   "name": "schneeballschlacht",
   "scripts": {
-    "ganache": "ganache-cli --networkId 1337",
-    "ganache-new": "node ./node_modules/ganache/dist/node/cli.js --networkId 1337",
+    "ganache": "node ./node_modules/ganache/dist/node/cli.js --networkId 1337 --port 7545",
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage --network development",
@@ -34,7 +33,6 @@
     "ethereum-waffle": "^3.4.4",
     "ethers": "^5.6.9",
     "ganache": "^7.3.1",
-    "ganache-cli": "^6.12.2",
     "hardhat": "^2.9.9",
     "hardhat-gas-reporter": "^1.0.8",
     "prettier": "^2.7.1",
