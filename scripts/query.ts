@@ -24,12 +24,12 @@ async function main() {
   }
   console.log("Querying...");
   const amounts = [100, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 7500];
-  bar = new ProgressBar(":bar :percent :token1", {
+  bar = new ProgressBar(":bar :percent :amount", {
     total: amounts.length,
     width: 100,
   });
   for (const amount of amounts) {
-    bar.tick({ token1: amount });
+    bar.tick({ amount });
     try {
       const gas = await sbs.estimateGas["getTokens(uint256,uint256)"](
         0,
