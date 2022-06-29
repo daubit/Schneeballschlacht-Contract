@@ -1,6 +1,5 @@
 /* eslint-disable node/no-missing-import */
 import { ethers } from "hardhat";
-import { MINT_FEE } from "./utils";
 import ProgressBar from "progress";
 
 async function main() {
@@ -10,22 +9,29 @@ async function main() {
   await sbs.deployed();
   const startTx = await sbs.startRound();
   await startTx.wait();
-  const total = 10000;
-  let bar = new ProgressBar(":bar :percent", { total, width: 100 });
-  console.log("Dispatching tokens!");
-  for (let i = 0; i < total; i++) {
+  const total = 100;
+  let bar = new ProgressBar(":bar :percent", {
+    total,
+    width: 100,
+  });
+  console.log("Minting...");
+  for (let i = 0; i < 100; i++) {
     bar.tick();
-    const mintTx = await sbs.connect(signers[0]).mint(signers[0].address, {
-      value: MINT_FEE,
-    });
+    const mintTx = await sbs
+      .connect(signers[0])
+      ["mint(address,uint256)"](signers[0].address, total);
     await mintTx.wait();
   }
+  console.log("Querying...");
   const amounts = [100, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 7500];
-  bar = new ProgressBar(":bar :amount", { total: amounts.length, width: 100 });
+  bar = new ProgressBar(":bar :percent :token1", {
+    total: amounts.length,
+    width: 100,
+  });
   for (const amount of amounts) {
-    bar.tick({ amount });
+    bar.tick({ token1: amount });
     try {
-      const gas = await sbs.estimateGas["getTokens(uint256, uint256)"](
+      const gas = await sbs.estimateGas["getTokens(uint256,uint256)"](
         0,
         amount
       );
@@ -33,6 +39,7 @@ async function main() {
     } catch (e) {
       console.log("Expensive!");
       console.log(e);
+      break;
     }
   }
 }
