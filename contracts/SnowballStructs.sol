@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 struct Round {
     address winner;
     uint256 totalPayout;
-    uint256 payoutPerLevel;
+    uint256 payoutPerToss;
     uint256 startHeight;
     uint256 endHeight;
     uint256 totalSupply;

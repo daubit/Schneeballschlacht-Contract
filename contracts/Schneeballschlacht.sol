@@ -147,8 +147,9 @@ contract Schneeballschlacht is
         _finished = false;
         uint256 totalPayout;
         uint256 bonusLevels;
-        (totalPayout, bonusLevels) = _processPayout();
-        _endRound(totalPayout, bonusLevels);
+        uint256 payoutPerToss;
+        (totalPayout, bonusLevels, payoutPerToss) = _processPayout();
+        _endRound(totalPayout, bonusLevels, payoutPerToss);
     }
 
     function toss(address to, uint256 tokenId)
@@ -329,27 +330,33 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
-    function _processPayout() internal returns (uint256, uint256) {
+    function _processPayout()
+        internal
+        returns (
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, this);
         _addEscrow(round, escrow);
 
-        uint256 totalLevels;
+        uint256 total;
 
         for (uint256 index = 1; index <= totalSupply(round); index++) {
-            totalLevels += _snowballs[round][index].level;
+            total += _snowballs[round][index].partners.length;
         }
 
-        // 1% of totalLevels are a winner bonus
-        uint256 bonusLevelsForWinner = totalLevels / 100;
-        totalLevels += bonusLevelsForWinner;
-        // max totalLevels wei are leftover each round for the next round
-        uint256 payoutPerLevel = address(this).balance / totalLevels;
+        // 1% of total are a winner bonus
+        uint256 bonusForWinner = total / 100;
+        total += bonusForWinner;
+        // max total wei are leftover each round for the next round
+        uint256 payoutPerToss = address(this).balance / total;
         // because there is leftover wei we need to make sure we only transfer to escrow what is needed
-        uint256 totalPayout = totalLevels * payoutPerLevel;
+        uint256 totalPayout = total * payoutPerToss;
         escrow.deposit{value: totalPayout}();
-        _setPayoutPerLevel(round, payoutPerLevel);
-        return (totalPayout, bonusLevelsForWinner);
+        return (totalPayout, bonusForWinner, payoutPerToss);
     }
 
     function _finish() internal {
@@ -382,13 +389,13 @@ contract Schneeballschlacht is
         require(from < total, "Out of bounds!");
         uint256 to = from + amount <= total ? from + amount : total;
         uint256 i;
-        Query[] memory result = new Query[](to - from);
-        for (uint256 index = from; index < to; index++) {
-            uint8 level = _snowballs[roundId][index].level;
-            address player = ownerOf(index);
+        Query[] memory result = new Query[](to - from + 1);
+        for (uint256 tokenId = from; tokenId <= to; tokenId++) {
+            uint8 level = _snowballs[roundId][tokenId].level;
+            address player = ownerOf(tokenId);
             Query memory query = Query({
                 player: player,
-                tokenId: index,
+                tokenId: tokenId,
                 level: level
             });
             result[i++] = query;

@@ -87,7 +87,7 @@ contract SchneeballSchlachtTest is ISchneeballschlacht {
 
     mapping(uint256 => uint256) private _payoutPerLevel;
 
-    function getPayoutPerLevel(uint256 roundId)
+    function getPayoutPerToss(uint256 roundId)
         external
         view
         returns (uint256)

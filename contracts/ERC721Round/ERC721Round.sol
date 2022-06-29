@@ -678,18 +678,8 @@ abstract contract ERC721Round is
         emit Winner(roundId, winner);
     }
 
-    function getPayoutPerLevel(uint256 roundId)
-        external
-        view
-        returns (uint256)
-    {
-        return _rounds[roundId].payoutPerLevel;
-    }
-
-    function _setPayoutPerLevel(uint256 roundId, uint256 payoutPerLevel)
-        internal
-    {
-        _rounds[roundId].payoutPerLevel = payoutPerLevel;
+    function getPayoutPerToss(uint256 roundId) external view returns (uint256) {
+        return _rounds[roundId].payoutPerToss;
     }
 
     function _startRound() internal {
@@ -700,14 +690,18 @@ abstract contract ERC721Round is
             endHeight: endHeight,
             winner: address(0),
             totalSupply: 0,
-            payoutPerLevel: 0,
+            payoutPerToss: 0,
             totalPayout: 0,
             winnerBonus: 0
         });
         _tokenIdCounter.reset();
     }
 
-    function _endRound(uint256 totalPayout, uint256 winnerBonus) internal {
+    function _endRound(
+        uint256 totalPayout,
+        uint256 winnerBonus,
+        uint256 payoutPerToss
+    ) internal {
         uint256 total = getTokenId();
         uint256 roundId = getRoundId();
 
@@ -717,6 +711,7 @@ abstract contract ERC721Round is
         _rounds[roundId].totalPayout = totalPayout;
         _rounds[roundId].totalSupply = total;
         _rounds[roundId].winnerBonus = winnerBonus;
+        _rounds[roundId].payoutPerToss = payoutPerToss;
     }
 
     function getTokensOfAddress(uint256 round, address addr)

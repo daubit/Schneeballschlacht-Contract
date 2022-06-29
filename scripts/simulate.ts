@@ -90,12 +90,12 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
   const payout = await schneeball["getPayout()"]();
   const tosses = await schneeball["totalTosses()"]();
   const totalSupply = await schneeball["totalSupply()"]();
-  const payoutPerLevel = await schneeball["getPayoutPerLevel(uint256)"](round);
+  const payoutPerToss = await schneeball["getPayoutPerToss(uint256)"](round);
   roundData.winner = winner;
   roundData.payout = Number(payout);
   roundData.tosses = Number(tosses);
   roundData.totalSupply = Number(totalSupply);
-  roundData.payoutPerLevel = Number(payoutPerLevel);
+  roundData.payoutPerToss = Number(payoutPerToss);
   writeFileSync(
     makePath(id, ROUNDS_FOLDER, round, ROUND_FILE),
     JSON.stringify(roundData, null, 2)
