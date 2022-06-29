@@ -23,16 +23,16 @@ contract Escrow {
     }
 
     function depositsOf(address payee) public view returns (uint256) {
-        require(!_hasWithdrawn[payee], "Already withdrawed");
+        require(!_hasWithdrawn[payee], "Already withdrawen");
         require(payee != address(0), "null address");
-        uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerLevel(_round);
+        uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerToss(_round);
         Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(
             _round,
             payee
         );
         uint256 payout;
         for (uint256 index; index < tokens.length; index++) {
-            payout += tokens[index].level * payoutPerLevel;
+            payout += tokens[index].partners.length * payoutPerLevel;
         }
         if(_schneeballschlacht.getWinner(_round) == payee) {
             payout += _schneeballschlacht.getWinnerBonus(_round) * payoutPerLevel;

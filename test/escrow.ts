@@ -40,9 +40,9 @@ describe("Schneeballschlacht - Escrow", async () => {
     it("can start successfully", async () => {
       const userAddress = users[0].address;
       const balls: SnowballStruct[] = [
-        { level: 20, partners: [], parentSnowballId: 4 },
-        { level: 19, partners: [], parentSnowballId: 3 },
-        { level: 18, partners: [], parentSnowballId: 2 },
+        { level: 20, partners: [1, 2, 3], parentSnowballId: 4 },
+        { level: 19, partners: [5, 6, 7], parentSnowballId: 3 },
+        { level: 18, partners: [5], parentSnowballId: 2 },
         { level: 17, partners: [], parentSnowballId: 1 },
       ];
       const setSnowballsOfAddressTx = await schneeball.setSnowballsOfAddress(
@@ -51,16 +51,16 @@ describe("Schneeballschlacht - Escrow", async () => {
         balls
       );
       await setSnowballsOfAddressTx.wait();
-      const setPayoutPerLevelTx = await schneeball.setPayoutPerLevel(0, 3);
-      await setPayoutPerLevelTx.wait();
+      const setPayoutPerTossTx = await schneeball.setPayoutPerToss(0, 3);
+      await setPayoutPerTossTx.wait();
 
       const depositsOf = await escrow.depositsOf(userAddress);
-      expect(Number(depositsOf)).to.be.equal(222);
+      expect(Number(depositsOf)).to.be.equal(21);
     });
 
     it("can withdraw", async () => {
       const userAddress = users[0].address;
-      const depositTx = await escrow.deposit({ value: 300 });
+      const depositTx = await escrow.deposit({ value: 21 });
       await depositTx.wait();
 
       const widthdraw = await escrow.withdraw(userAddress);

@@ -85,18 +85,18 @@ contract SchneeballSchlachtTest is ISchneeballschlacht {
 
     function getEndHeight(uint256 roundId) external view returns (uint256) {}
 
-    mapping(uint256 => uint256) private _payoutPerLevel;
+    mapping(uint256 => uint256) private _payoutPerToss;
 
     function getPayoutPerToss(uint256 roundId)
         external
         view
         returns (uint256)
     {
-        return _payoutPerLevel[roundId];
+        return _payoutPerToss[roundId];
     }
 
-    function setPayoutPerLevel(uint256 roundId, uint256 amount) external {
-        _payoutPerLevel[roundId] = amount;
+    function setPayoutPerToss(uint256 roundId, uint256 amount) external {
+        _payoutPerToss[roundId] = amount;
     }
 
     function getWinner(uint256 roundId) public view returns (address) {}
