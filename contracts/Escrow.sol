@@ -11,10 +11,10 @@ contract Escrow {
 
     event Withdrawn(address indexed payee, uint256 weiAmount);
 
-    uint256 private _round;
     ISchneeballschlacht private _schneeballschlacht;
 
-    // bool is false by default
+    uint256 private _round;
+
     mapping(address => bool) private _hasWithdrawn;
 
     constructor(uint256 round, ISchneeballschlacht schneeballschlacht) {
@@ -25,17 +25,19 @@ contract Escrow {
     function depositsOf(address payee) public view returns (uint256) {
         require(!_hasWithdrawn[payee], "Already withdrawen");
         require(payee != address(0), "null address");
-        uint256 payoutPerLevel = _schneeballschlacht.getPayoutPerToss(_round);
+        uint256 payoutPerToss = _schneeballschlacht.getPayoutPerToss(_round);
         Snowball[] memory tokens = _schneeballschlacht.getSnowballsOfAddress(
             _round,
             payee
         );
         uint256 payout;
         for (uint256 index; index < tokens.length; index++) {
-            payout += tokens[index].partners.length * payoutPerLevel;
+            payout += tokens[index].partners.length * payoutPerToss;
         }
-        if(_schneeballschlacht.getWinner(_round) == payee) {
-            payout += _schneeballschlacht.getWinnerBonus(_round) * payoutPerLevel;
+        if (_schneeballschlacht.getWinner(_round) == payee) {
+            payout +=
+                _schneeballschlacht.getWinnerBonus(_round) *
+                payoutPerToss;
         }
         return payout;
     }
