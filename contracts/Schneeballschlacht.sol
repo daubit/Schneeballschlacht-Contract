@@ -17,7 +17,7 @@ contract Schneeballschlacht is
     Pausable
 {
     using Strings for uint8;
-    uint8 private constant MAX_LEVEL = 5;
+    uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
@@ -85,6 +85,11 @@ contract Schneeballschlacht is
         return _snowballs[roundId][tokenId].level;
     }
 
+    /**
+     * @dev External function to return list of partner tokenIds
+     *
+     * @param tokenId uint256 ID of the token to be transferred
+     */
     function getPartnerTokenIds(uint256 tokenId)
         external
         view
@@ -107,6 +112,11 @@ contract Schneeballschlacht is
         return partners;
     }
 
+    /**
+     * @dev External function to return list of snowballs owned by addr
+     *
+     * @param addr address of the owner to view
+     */
     function getSnowballsOfAddress(address addr)
         external
         view
@@ -132,17 +142,63 @@ contract Schneeballschlacht is
         return snowballs;
     }
 
+    function getTokens(uint256 page, uint256 amount)
+        external
+        view
+        returns (Query[] memory)
+    {
+        uint256 roundId = getRoundId();
+        return getTokens(roundId, page, amount);
+    }
+
+    function getTokens(
+        uint256 roundId,
+        uint256 page,
+        uint256 amount
+    ) public view returns (Query[] memory) {
+        uint256 total = totalSupply(roundId);
+        uint256 from = amount * page + 1;
+        require(from < total, "Out of bounds!");
+        uint256 to = from + amount <= total ? from + amount : total;
+        uint256 i;
+        Query[] memory result = new Query[](to - from + 1);
+        for (uint256 tokenId = from; tokenId <= to; tokenId++) {
+            uint8 level = _snowballs[roundId][tokenId].level;
+            address player = ownerOf(tokenId);
+            Query memory query = Query({
+                player: player,
+                tokenId: tokenId,
+                level: level
+            });
+            result[i++] = query;
+        }
+        return result;
+    }
+
+    /**
+     * @dev Function to mint a snowball
+     *
+     * @param to address to send the snowball to
+     */
     function mint(address to) public payable whenNotPaused {
         require(msg.value == MINT_FEE, "Insufficient fee!");
         _mint(to);
     }
 
+    /**
+     * @dev Function to initialize a new round. Reverts when a round is already running.
+     * The address calling the function is granted a free snowball.
+     */
     function startRound() public override(ISchneeballschlacht) whenPaused {
         _unpause();
         _startRound();
         _mint(msg.sender);
     }
 
+    /**
+     * @dev Function to end a round. Reverts when a round is not finished.
+     * endRound
+     */
     function endRound() public override(ISchneeballschlacht) whenFinished {
         _finished = false;
         uint256 totalPayout;
@@ -152,6 +208,25 @@ contract Schneeballschlacht is
         _endRound(totalPayout, bonusLevels, payoutPerToss);
     }
 
+    /**
+     * @dev Function to toss a snowball to a different address.
+     * Calling conditions:
+     *  - The correct amount of fee must be present
+     *  - The tokenId must be owned by the sender
+     *  - The address to toss to must be different from previous address tossed to
+     *
+     * If a snowball of level n has been thrown at n + 1 unique addresses,
+     * then a random address is chosen to mint an upgraded snowball to.
+     * The random address is chosen by the partners including the thrower.
+     *
+     * If a snowball would be upgrading to max level,
+     * then after the sender receives the final snowball the game finishes
+     * and the mint, toss and transfer functions are paused.
+     *
+     *
+     * @param to address to toss the snowball to.
+     * @param tokenId snowball to toss
+     */
     function toss(address to, uint256 tokenId)
         external
         payable
@@ -196,6 +271,13 @@ contract Schneeballschlacht is
         }
     }
 
+    /**
+     * @dev Each transfer function from ERC721 has been overridden so it will be paused when a round is finished.
+     *
+     * @param from address
+     * @param to address
+     * @param tokenId uint256
+     */
     function transferFrom(
         address from,
         address to,
@@ -221,15 +303,26 @@ contract Schneeballschlacht is
         super.safeTransferFrom(from, to, tokenId, data);
     }
 
+    /**
+     * @dev Returns the amount of tosses made in the current round
+     */
     function totalTosses() public view returns (uint256) {
         uint256 roundId = getRoundId();
         return _tosses[roundId];
     }
 
+    /**
+     * @dev Returns the amount of tosses made in the round
+     *
+     * @param roundId uint256
+     */
     function totalTosses(uint256 roundId) public view returns (uint256) {
         return _tosses[roundId];
     }
 
+    /**
+     * @dev Returns the total supply of the current round
+     */
     function totalSupply()
         public
         view
@@ -239,6 +332,11 @@ contract Schneeballschlacht is
         return ERC721Round.totalSupply();
     }
 
+    /**
+     * @dev Returns the total supply of the give roundId
+     *
+     * @param roundId uint256
+     */
     function totalSupply(uint256 roundId)
         public
         view
@@ -248,6 +346,11 @@ contract Schneeballschlacht is
         return ERC721Round.totalSupply(roundId);
     }
 
+    /**
+     * @dev Returns the URI of the token based of its level
+     *
+     * @param tokenId uint256
+     */
     function tokenURI(uint256 tokenId)
         public
         view
@@ -265,6 +368,12 @@ contract Schneeballschlacht is
             );
     }
 
+    /**
+     * @dev Returns the URI of the token based of its level
+     *
+     * @param tokenId uint256
+     * @param roundId uint256
+     */
     function tokenURI(uint256 roundId, uint256 tokenId)
         external
         view
@@ -280,6 +389,11 @@ contract Schneeballschlacht is
             );
     }
 
+    /**
+     * @dev Internal function for handling mint
+     *
+     * @param to address
+     */
     function _mint(address to) internal {
         uint256 roundId = getRoundId();
         uint256 tokenId = _newTokenId();
@@ -291,6 +405,14 @@ contract Schneeballschlacht is
         });
     }
 
+    /**
+     * @dev Internal function for handling level up
+     * Function will level up as long as the next level is not max level,
+     * because it has to be garanteed that the address achieving max level gets the max level snowball
+     *
+     * @param to address
+     * @param tokenId uint256
+     */
     function _levelup(address to, uint256 tokenId) internal {
         uint256 roundId = getRoundId();
         uint256 amountOldPartners = _snowballs[roundId][tokenId]
@@ -305,6 +427,8 @@ contract Schneeballschlacht is
         uint256 randIndex = _randomIndex(partners.length);
         uint256 randToken = partners[randIndex];
         uint8 randLevel = _snowballs[roundId][randToken].level;
+        // toss handles level up to max since it ends the game
+        // otherwise level up in here
         if (randLevel + 1 < MAX_LEVEL) {
             uint256 upgradedTokenId = _newTokenId();
             _safeMint(to, upgradedTokenId);
@@ -317,6 +441,11 @@ contract Schneeballschlacht is
         }
     }
 
+    /**
+     * @dev Pseudo-random generator.
+     *
+     * @param length uint256
+     */
     function _randomIndex(uint256 length) internal view returns (uint256) {
         bytes32 hashValue = keccak256(
             abi.encodePacked(
@@ -330,6 +459,10 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
+    /**
+     * @dev Internal function for handling the payout to each address owning a snowball
+     * Payout is based on the tosses made by a snowball
+     */
     function _processPayout()
         internal
         returns (
@@ -341,14 +474,8 @@ contract Schneeballschlacht is
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, this);
         _addEscrow(round, escrow);
-
-        uint256 total;
-
-        for (uint256 index = 1; index <= totalSupply(round); index++) {
-            total += _snowballs[round][index].partners.length;
-        }
-
-        // 1% of total are a winner bonus
+        uint256 total = _tosses[round];
+        // 1% of total is bonus for the winner
         uint256 bonusForWinner = total / 100;
         total += bonusForWinner;
         // max total wei are leftover each round for the next round
@@ -359,6 +486,10 @@ contract Schneeballschlacht is
         return (totalPayout, bonusForWinner, payoutPerToss);
     }
 
+    /**
+     * @dev Internal function for handling the end of a round.
+     * Winner is minted a reward NFT
+     */
     function _finish() internal {
         _pause();
         _finished = true;
@@ -368,38 +499,5 @@ contract Schneeballschlacht is
 
     function _baseURI() internal pure override returns (string memory) {
         return "ipfs://";
-    }
-
-    function getTokens(uint256 page, uint256 amount)
-        external
-        view
-        returns (Query[] memory)
-    {
-        uint256 roundId = getRoundId();
-        return getTokens(roundId, page, amount);
-    }
-
-    function getTokens(
-        uint256 roundId,
-        uint256 page,
-        uint256 amount
-    ) public view returns (Query[] memory) {
-        uint256 total = totalSupply(roundId);
-        uint256 from = amount * page + 1;
-        require(from < total, "Out of bounds!");
-        uint256 to = from + amount <= total ? from + amount : total;
-        uint256 i;
-        Query[] memory result = new Query[](to - from + 1);
-        for (uint256 tokenId = from; tokenId <= to; tokenId++) {
-            uint8 level = _snowballs[roundId][tokenId].level;
-            address player = ownerOf(tokenId);
-            Query memory query = Query({
-                player: player,
-                tokenId: tokenId,
-                level: level
-            });
-            result[i++] = query;
-        }
-        return result;
     }
 }
