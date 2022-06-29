@@ -244,7 +244,7 @@ contract Schneeballschlacht is
         _tosses[roundId]++;
 
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
-        require(amountOfPartners < level + 1, "No throws left");
+        require(amountOfPartners <= level + 1, "No throws left");
 
         // Next level up also mints randomly
         if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
