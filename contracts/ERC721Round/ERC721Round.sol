@@ -41,13 +41,13 @@ abstract contract ERC721Round is
     Counters.Counter private _roundIdCounter;
     Counters.Counter private _tokenIdCounter;
 
-    // Mapping from round ID to Round
+    // Mapping from round id to Round struct
     mapping(uint256 => Round) private _rounds;
 
-    // Mapping from round to mapping from token ID to owner address
+    // Mapping from round id to mapping from token id to owner address
     mapping(uint256 => mapping(uint256 => address)) private _owners;
 
-    // Mapping owner address to token count
+    // Mapping owner address to token amount
     mapping(uint256 => mapping(address => uint256)) private _balances;
 
     // Mapping owner address to index to token id
@@ -57,11 +57,11 @@ abstract contract ERC721Round is
     // Mapping token id to token index in _tokenOwners
     mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
 
-    // Mapping from owner to operator approvals
+    // Mapping from round id to owner to operator approvals
     mapping(uint256 => mapping(address => mapping(address => bool)))
         private _operatorApprovals;
 
-    // Mapping from token ID to approved address
+    // Mapping from token id to approved address
     mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
 
     event Winner(uint256 indexed roundId, address indexed player);
@@ -426,9 +426,6 @@ abstract contract ERC721Round is
         _rounds[roundId].totalSupply++;
 
         _addTokenOwner(to, tokenId);
-
-        emit Transfer(address(0), to, tokenId);
-
         _afterTokenTransfer(address(0), to, tokenId);
     }
 

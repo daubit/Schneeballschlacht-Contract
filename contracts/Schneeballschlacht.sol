@@ -22,7 +22,7 @@ contract Schneeballschlacht is
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
 
-    HallOfFame private _HOF;
+    HallOfFame private _hof;
 
     // Mapping roundId to tokenId ID to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
@@ -30,25 +30,20 @@ contract Schneeballschlacht is
     // Mapping roundId to totalTosses
     mapping(uint256 => uint256) private _tosses;
 
+    event Mint(address indexed to);
+
+    event Toss(
+        address indexed from,
+        address indexed to,
+        uint256 indexed tokenId
+    );
+
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
 
-    constructor(address HOF) ERC721Round("Schneeballschlacht", "Schneeball") {
+    constructor(address hof) ERC721Round("Schneeballschlacht", "Schneeball") {
         _pause();
-        _HOF = HallOfFame(HOF);
+        _hof = HallOfFame(hof);
         _finished = false;
-    }
-
-    modifier checkToken(uint256 tokenId) {
-        require(tokenId > 0 && tokenId <= getTokenId(), "Invalid token ID!");
-        _;
-    }
-
-    modifier checkFee(uint256 tokenId) {
-        require(
-            msg.value == TOSS_FEE * _snowballs[getRoundId()][tokenId].level,
-            "Insufficient fee!"
-        );
-        _;
     }
 
     modifier whenFinished() {
@@ -58,10 +53,6 @@ contract Schneeballschlacht is
 
     modifier isTransferable(uint256 tokenId, address to) {
         uint256 roundId = getRoundId();
-        uint8 level = _snowballs[roundId][tokenId].level;
-        uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
-        require(level != MAX_LEVEL, "Max level reached!");
-        require(amountOfPartners < level + 1, "No throws left");
         uint256[] memory partners = _snowballs[roundId][tokenId].partners;
         for (uint256 index; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
@@ -183,6 +174,7 @@ contract Schneeballschlacht is
     function mint(address to) public payable whenNotPaused {
         require(msg.value == MINT_FEE, "Insufficient fee!");
         _mint(to);
+        emit Mint(to);
     }
 
     /**
@@ -231,16 +223,14 @@ contract Schneeballschlacht is
         external
         payable
         whenNotPaused
-        checkToken(tokenId)
-        checkFee(tokenId)
         isTransferable(tokenId, to)
     {
         require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
         require(to != msg.sender, "Error: Self Toss");
         require(to != address(0), "Error: zero address");
-
         uint256 roundId = getRoundId();
         uint8 level = _snowballs[roundId][tokenId].level;
+        require(msg.value == TOSS_FEE * level, "Insufficient fee!");
 
         uint256 newTokenId = _newTokenId();
         _safeMint(to, newTokenId);
@@ -252,7 +242,10 @@ contract Schneeballschlacht is
         });
         _snowballs[roundId][tokenId].partners.push(newTokenId);
         _tosses[roundId]++;
+
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
+        require(amountOfPartners < level + 1, "No throws left");
+
         // Next level up also mints randomly
         if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
             _levelup(to, tokenId);
@@ -269,6 +262,7 @@ contract Schneeballschlacht is
             // End Game
             _finish();
         }
+        emit Toss(msg.sender, to, tokenId);
     }
 
     /**
@@ -494,7 +488,7 @@ contract Schneeballschlacht is
         _pause();
         _finished = true;
         _setWinner(msg.sender);
-        // _HOF.mint(msg.sender);
+        // _hof.mint(msg.sender);
     }
 
     function _baseURI() internal pure override returns (string memory) {
