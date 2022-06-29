@@ -137,21 +137,13 @@ contract Schneeballschlacht is
         _mint(to);
     }
 
-    function startRound()
-        public
-        override(ERC721Round, ISchneeballschlacht)
-        whenPaused
-    {
+    function startRound() public override(ISchneeballschlacht) whenPaused {
         _unpause();
-        ERC721Round.startRound();
+        _startRound();
         _mint(msg.sender);
     }
 
-    function endRound()
-        public
-        override(ISchneeballschlacht)
-        whenFinished
-    {
+    function endRound() public override(ISchneeballschlacht) whenFinished {
         _finished = false;
         uint256 totalPayout;
         uint256 bonusLevels;
@@ -337,7 +329,7 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
-    function _processPayout() internal returns(uint256, uint256) {
+    function _processPayout() internal returns (uint256, uint256) {
         uint256 round = getRoundId();
         Escrow escrow = new Escrow(round, this);
         _addEscrow(round, escrow);
@@ -385,14 +377,13 @@ contract Schneeballschlacht is
         uint256 page,
         uint256 amount
     ) public view returns (Query[] memory) {
-        require(amount > 0, "");
         uint256 total = totalSupply(roundId);
-        Query[] memory result = new Query[](0);
         uint256 from = amount * page + 1;
         require(from < total, "Out of bounds!");
         uint256 to = from + amount <= total ? from + amount : total;
         uint256 i;
-        for (uint256 index = from; index <= to; index++) {
+        Query[] memory result = new Query[](to - from);
+        for (uint256 index = from; index < to; index++) {
             uint8 level = _snowballs[roundId][index].level;
             address player = ownerOf(index);
             Query memory query = Query({
