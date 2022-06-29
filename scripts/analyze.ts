@@ -1,10 +1,10 @@
 /* eslint-disable node/no-missing-import */
 import { BigNumber } from "ethers";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "fs";
+import { ethers } from "hardhat";
 import { ActionType } from "./types";
 import {
   CSV_FOLDER,
-  DATA_FOLDER,
   fetchRound,
   makePath,
   META_CSV,
@@ -15,12 +15,11 @@ import {
 } from "./utils";
 
 function median(numbers: BigNumber[]) {
-  const sorted = numbers.sort();
+  const sorted = numbers.sort((a, b) => (a.eq(b) ? 0 : a.lt(b) ? -1 : 1));
+  const m = Math.floor(numbers.length / 2);
   if (numbers.length % 2 === 0) {
-    const m = Math.floor(numbers.length / 2);
     return sorted[m];
   } else {
-    const m = Math.floor(numbers.length / 2);
     return sorted[m].add(sorted[m + 1]).div(2);
   }
 }
@@ -31,12 +30,12 @@ function calculate(numbers: BigNumber[]) {
     .div(numbers.length);
 
   const max = numbers.reduce(
-    (prev, curr) => (prev > curr ? prev : curr),
-    BigNumber.from(Number.MIN_SAFE_INTEGER.toString())
+    (prev, curr) => (prev.gt(curr) ? prev : curr),
+    numbers[0]
   );
   const min = numbers.reduce(
-    (prev, curr) => (prev > curr ? curr : prev),
-    BigNumber.from(Number.MIN_SAFE_INTEGER.toString())
+    (prev, curr) => (prev.gt(curr) ? curr : prev),
+    numbers[0]
   );
   return { avg, min, max };
 }
@@ -47,6 +46,15 @@ function format(data: { avg: BigNumber; min: BigNumber; max: BigNumber }) {
     avg: avg.toString(),
     min: min.toString(),
     max: max.toString(),
+  };
+}
+
+function formatEther(data: { avg: BigNumber; min: BigNumber; max: BigNumber }) {
+  const { avg, min, max } = data;
+  return {
+    avg: ethers.utils.formatEther(avg),
+    min: ethers.utils.formatEther(min),
+    max: ethers.utils.formatEther(max),
   };
 }
 
@@ -99,26 +107,30 @@ function analyzeRound(id: number | string, round: number | string) {
 }
 
 function main() {
-  const ids = readdirSync(DATA_FOLDER);
+  const ids = ["1656499153284"]; // readdirSync(DATA_FOLDER);
   for (const id of ids) {
     const rounds = readdirSync(makePath(id, ROUNDS_FOLDER))
       .map((s) => Number(s))
       .sort((a, b) => a - b);
     const totalSupply = [];
     const tosses = [];
-    const payout = [];
+    const payouts = [];
     let csv =
       "Round,Avg Profit, Min Profit, Max Profit, Median Profit, Avg Spending, Min Spending, Max Spending,\r";
     for (const round of rounds) {
       const { roundData } = fetchRound(id, round);
       totalSupply.push(BigNumber.from(roundData.totalSupply.toString()));
       tosses.push(BigNumber.from(roundData.tosses.toString()));
-      payout.push(BigNumber.from(roundData.payout.toString()));
+      payouts.push(BigNumber.from(roundData.payout.toString()));
       const { spendings, profits, median } = analyzeRound(id, round);
-      const entry = `${round},${formatData(
-        format(profits),
-        undefined
-      )},${median},${formatData(format(spendings), undefined)}\r`;
+      const minProfit = profits.min;
+      const maxProfit = profits.max;
+      const avgProfit = profits.avg;
+      const entry = `${round},${avgProfit},${ethers.utils.formatEther(
+        minProfit
+      )},${ethers.utils.formatEther(maxProfit)},${ethers.utils.formatEther(
+        median
+      )},${formatData(formatEther(spendings), undefined)}\r`;
       csv += entry;
     }
     if (!existsSync(makePath(id, CSV_FOLDER)))
@@ -128,7 +140,7 @@ function main() {
     csv += "\n";
     csv += formatData(format(calculate(tosses)), "Toss");
     csv += "\n";
-    csv += formatData(format(calculate(payout)), "Payout");
+    csv += formatData(formatEther(calculate(payouts)), "Payout");
     writeFileSync(makePath(id, CSV_FOLDER, META_CSV), csv);
   }
 }
