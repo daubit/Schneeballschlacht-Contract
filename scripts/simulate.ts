@@ -113,7 +113,7 @@ async function save(id: number, contract: Contract, round: number) {
   await saveRound(id, contract, round);
   await saveTokens(id, contract, round);
   writeFileSync(
-    `data/${id}/${round}/history.json`,
+    `data/${id}/rounds/${round}/history.json`,
     JSON.stringify(history, null, 2)
   );
 }
