@@ -29,7 +29,7 @@ let history: Action[] = [];
 
 const sim = new Simulation();
 
-async function initRound(id: number, round: number, schneeball: Contract) {
+async function newRound(id: number, round: number, schneeball: Contract) {
   const path = makePath(id, ROUNDS_FOLDER, round);
   if (!existsSync(path)) {
     mkdirSync(path, { recursive: true });
@@ -154,7 +154,7 @@ async function simulate(id: number, n: number) {
   console.log("Contract deployed!");
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
-    await initRound(id, round, schneeball);
+    await newRound(id, round, schneeball);
     while (true) {
       try {
         await simulateRound(id, schneeball);
