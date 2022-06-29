@@ -11,16 +11,29 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { ethers } from "hardhat";
 import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
-import { getLevel, getToken, hasTokens, MINT_FEE, TOSS_FEE } from "./utils";
+import {
+  DEPOSIT_FILE,
+  getLevel,
+  getToken,
+  hasTokens,
+  HISTORY_FILE,
+  makePath,
+  MINT_FEE,
+  ROUNDS_FOLDER,
+  ROUND_FILE,
+  TOKEN_FILE,
+  TOSS_FEE,
+} from "./utils";
 
 let history: Action[] = [];
 
 const sim = new Simulation();
 
 async function initRound(id: number, round: number, schneeball: Contract) {
-  if (!existsSync(`data/${id}/rounds/${round}`)) {
-    mkdirSync(`data/${id}/rounds/${round}`, { recursive: true });
-    console.log(`Folder data/${id}/rounds/${round} created`);
+  const path = makePath(id, ROUNDS_FOLDER, round);
+  if (!existsSync(path)) {
+    mkdirSync(path, { recursive: true });
+    console.log(`Folder ${path} created`);
   }
   const startTx = await schneeball.startRound();
   await startTx.wait();
@@ -84,7 +97,7 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
   roundData.totalSupply = Number(totalSupply);
   roundData.payoutPerLevel = Number(payoutPerLevel);
   writeFileSync(
-    `data/${id}/rounds/${round}/round.json`,
+    makePath(id, ROUNDS_FOLDER, round, ROUND_FILE),
     JSON.stringify(roundData, null, 2)
   );
 }
@@ -104,7 +117,7 @@ async function saveTokens(id: number, schneeball: Contract, round: number) {
     }
   }
   writeFileSync(
-    `data/${id}/rounds/${round}/tokens.json`,
+    makePath(id, ROUNDS_FOLDER, round, TOKEN_FILE),
     JSON.stringify(addressData, null, 2)
   );
 }
@@ -113,7 +126,7 @@ async function save(id: number, contract: Contract, round: number) {
   await saveRound(id, contract, round);
   await saveTokens(id, contract, round);
   writeFileSync(
-    `data/${id}/rounds/${round}/history.json`,
+    makePath(id, ROUNDS_FOLDER, round, HISTORY_FILE),
     JSON.stringify(history, null, 2)
   );
 }
@@ -130,7 +143,7 @@ async function payout(id: number, contract: Contract, round: number) {
     deposits[address] = Number(deposit);
   }
   writeFileSync(
-    `data/${id}/rounds/${round}/deposit.json`,
+    makePath(id, ROUNDS_FOLDER, round, DEPOSIT_FILE),
     JSON.stringify(deposits, null, 2)
   );
 }
