@@ -18,6 +18,7 @@ export const ROUND_FILE = "round.json";
 export const HISTORY_FILE = "history.json";
 export const DEPOSIT_FILE = "deposit.json";
 
+export const GAS_CSV = "gas.csv";
 export const META_CSV = "meta.csv";
 export const ROUND_CSV = "rounds.csv";
 
