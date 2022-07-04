@@ -4,10 +4,10 @@
     "ganache": "node ./node_modules/ganache/dist/node/cli.js --networkId 1337 --port 7545",
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
-    "coverage": "npx hardhat coverage --network development",
-    "simulate": "npx hardhat run scripts/simulate.ts --network development",
-    "integration": "npx hardhat run scripts/integration.ts --network development",
-    "test": "npx hardhat test --network development"
+    "coverage": "npx hardhat coverage",
+    "simulate": "npx hardhat run scripts/simulate.ts",
+    "integration": "npx hardhat run scripts/integration.ts",
+    "test": "npx hardhat test"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
