@@ -644,6 +644,17 @@ abstract contract ERC721Round is
         return _tokenIdCounter.current();
     }
 
+    function getStartHeight() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
+        return _rounds[roundId].startHeight;
+    }
+
+    function getStartHeight(uint256 roundId) external view returns (uint256) {
+        require(roundId > 0, "No Round started yet!");
+        return _rounds[roundId].startHeight;
+    }
+
     function getEndHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
         require(roundId > 0, "No Round started yet!");

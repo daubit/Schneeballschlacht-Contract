@@ -67,7 +67,8 @@ contract Schneeballschlacht is
     }
 
     modifier senderNotTimeouted() {
-        require(_timeoutStart[msg.sender] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[msg.sender] >= block.number, "Timeout");
+        uint256 roundStart = getStartHeight();
+        require(_timeoutStart[msg.sender] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[msg.sender] <= roundStart, "Timeout");
         _;
     }
 
@@ -513,7 +514,8 @@ contract Schneeballschlacht is
     }
 
     function isTimedOut(address addr) external view returns (bool) {
-        return _timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[addr] >= block.number;
+        uint256 roundStart = getStartHeight();
+        return !(_timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[addr] <= roundStart);
     }
 
     function hasStone(uint8 level) internal view returns (bool) {

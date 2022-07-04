@@ -3,10 +3,16 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
-import { ethers } from "hardhat";
+import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
 
+const ethers = hardhat.ethers;
+
 describe("Schneeballschlacht", async () => {
+  before(async () => {
+    // mine 100 blocks
+    await hardhat.network.provider.send("hardhat_mine", ["0x100", "0x2"]);
+  });
   let schneeball: Contract;
   // eslint-disable-next-line no-unused-vars
   let users: SignerWithAddress[];
@@ -114,14 +120,11 @@ describe("Schneeballschlacht", async () => {
       const userAddress = users[0].address;
       const partnerAddress = users[1].address;
       const partner2Address = users[2].address;
-      let tossTx;
-      let balance;
-
-      tossTx = await schneeball.connect(users[0]).toss(partnerAddress, 1, {
+      let tossTx = await schneeball.connect(users[0]).toss(partnerAddress, 1, {
         value: TOSS_FEE(1),
       });
       await tossTx.wait();
-      balance = await schneeball["balanceOf(address)"](partnerAddress);
+      let balance = await schneeball["balanceOf(address)"](partnerAddress);
       expect(Number(balance)).to.equal(1);
       balance = await schneeball["balanceOf(address)"](userAddress);
       expect(Number(balance)).to.equal(2);
