@@ -18,6 +18,8 @@ contract Schneeballschlacht is
 {
     using Strings for uint8;
     uint8 private constant MAX_LEVEL = 20;
+    // ~3 min at 1 Block / 2 secs, block times vary slightly from 2 secs
+    uint8 private constant TIMEOUT_BLOCK_LENGTH = 90;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
@@ -30,6 +32,9 @@ contract Schneeballschlacht is
     // Mapping roundId to totalTosses
     mapping(uint256 => uint256) private _tosses;
 
+    // map holder address to timeout start blocknumber, defaults to 0
+    mapping(address => uint256) private _timeoutStart;
+
     event Mint(address indexed to);
 
     event Toss(
@@ -39,6 +44,7 @@ contract Schneeballschlacht is
     );
 
     event LevelUp(uint256 indexed roundId, uint256 indexed tokenId);
+    event Timeout(address indexed from, uint256 indexed tokenId, address indexed to);
 
     constructor(address hof) ERC721Round("Schneeballschlacht", "Schneeball") {
         _pause();
@@ -57,6 +63,11 @@ contract Schneeballschlacht is
         for (uint256 index; index < partners.length; index++) {
             require(ownerOf(partners[index]) != to, "No double transfer!");
         }
+        _;
+    }
+
+    modifier senderNotTimeouted() {
+        require(_timeoutStart[msg.sender] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[msg.sender] >= block.number, "Timeout");
         _;
     }
 
@@ -224,6 +235,7 @@ contract Schneeballschlacht is
         payable
         whenNotPaused
         isTransferable(tokenId, to)
+        senderNotTimeouted
     {
         require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
         require(to != msg.sender, "Error: Self Toss");
@@ -245,6 +257,11 @@ contract Schneeballschlacht is
 
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         require(amountOfPartners <= level + 1, "No throws left");
+
+        if(hasStone(level)) {
+            _timeoutStart[to] = block.number;
+            emit Timeout(msg.sender, tokenId, to);
+        }
 
         // Next level up also mints randomly
         if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
@@ -493,5 +510,16 @@ contract Schneeballschlacht is
 
     function _baseURI() internal pure override returns (string memory) {
         return "ipfs://";
+    }
+
+    function isTimedOut(address addr) external view returns (bool) {
+        return _timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[addr] >= block.number;
+    }
+
+    function hasStone(uint8 level) internal view returns (bool) {
+        // level 1 -> 1 /1000 level 2 -> 2 / 1000 etc
+        // randomIndex returns [0...parameter - 1] because it uses modulo internally
+        // so len([0...parameter - 1]) == parameter 
+        return _randomIndex(1000) < level;
     }
 }
