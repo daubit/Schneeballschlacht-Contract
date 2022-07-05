@@ -10,8 +10,8 @@ const ethers = hardhat.ethers;
 
 describe("Schneeballschlacht", async () => {
   before(async () => {
-    // mine 100 blocks
-    await hardhat.network.provider.send("hardhat_mine", ["0x100", "0x2"]);
+    // mine 43200 blocks
+    await hardhat.network.provider.send("hardhat_mine", ["0xA8C0", "0x2"]);
   });
   let schneeball: Contract;
   // eslint-disable-next-line no-unused-vars
@@ -120,6 +120,10 @@ describe("Schneeballschlacht", async () => {
       const userAddress = users[0].address;
       const partnerAddress = users[1].address;
       const partner2Address = users[2].address;
+      let cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(false);
+      let timeout = await schneeball.isTimedOut(userAddress);
+      expect(timeout).to.equal(false);
       let tossTx = await schneeball.connect(users[0]).toss(partnerAddress, 1, {
         value: TOSS_FEE(1),
       });
@@ -128,6 +132,15 @@ describe("Schneeballschlacht", async () => {
       expect(Number(balance)).to.equal(1);
       balance = await schneeball["balanceOf(address)"](userAddress);
       expect(Number(balance)).to.equal(2);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(true);
+      timeout = await schneeball.isTimedOut(userAddress);
+      expect(timeout).to.equal(false);
+
+      // mine 90 blocks
+      await hardhat.network.provider.send("hardhat_mine", ["0x5A", "0x2"]);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(false);
 
       tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
         value: TOSS_FEE(1),
@@ -135,6 +148,15 @@ describe("Schneeballschlacht", async () => {
       await tossTx.wait();
       balance = await schneeball["balanceOf(address)"](partner2Address);
       expect(Number(balance)).to.greaterThanOrEqual(1);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(true);
+    });
+    it("cannot toss in cooldown", async () => {
+      const partner3Address = users[3].address;
+      const tossTx = schneeball.connect(users[0]).toss(partner3Address, 1, {
+        value: TOSS_FEE(1),
+      });
+      await expect(tossTx).to.revertedWith("Cooldown");
     });
     it("cannot toss other users snowball", async () => {
       const tossTx = schneeball.connect(users[1]).toss(users[2].address, 1, {
@@ -248,6 +270,150 @@ describe("Schneeballschlacht", async () => {
           value: TOSS_FEE(1),
         })
       ).to.not.be.reverted;
+    });
+  });
+
+  describe("Contract Creation - Always stone", () => {
+    let schneeball: Contract;
+    let users: SignerWithAddress[];
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy SchneeballSchlachtTimeoutTest
+      const SchneeballSchlachtTimeoutTest = await ethers.getContractFactory(
+        "SchneeballSchlachtTimeoutTest"
+      );
+      schneeball = await SchneeballSchlachtTimeoutTest.deploy(
+        ethers.constants.AddressZero
+      );
+      await schneeball.deployed();
+    });
+    it("Name is correct", async () => {
+      expect(await schneeball.name()).to.be.eq("Schneeballschlacht");
+    });
+    it("Symbol is correct", async () => {
+      expect(await schneeball.symbol()).to.be.eq("Schneeball");
+    });
+    it("mint is locked", async () => {
+      const userAddress = users[0].address;
+      expect(schneeball.mint(userAddress, { value: MINT_FEE })).to.be.reverted;
+    });
+    it("transferFrom is locked", async () => {
+      const userAddress = users[0].address;
+      const partnerAddress = users[1].address;
+      expect(schneeball.transferFrom(userAddress, partnerAddress, 1)).to.be
+        .reverted;
+    });
+    it("safeTransferFrom is locked", async () => {
+      const userAddress = users[0].address;
+      const partnerAddress = users[1].address;
+      expect(
+        schneeball["safeTransferFrom(address,address,uint256)"](
+          userAddress,
+          partnerAddress,
+          1
+        )
+      ).to.be.reverted;
+    });
+    it("toss is locked", async () => {
+      const userAddress = users[0].address;
+      const partnerAddress = users[1].address;
+      expect(
+        schneeball
+          .attach(userAddress)
+          .toss(partnerAddress, 1, { value: TOSS_FEE(1) })
+      ).to.be.reverted;
+    });
+    it("endRound is locked", async () => {
+      expect(schneeball.endRound()).to.be.reverted;
+    });
+    it("can start successfully", async () => {
+      const startTx = await schneeball.startRound();
+      await startTx.wait();
+      const endHeight = await schneeball["getEndHeight()"]();
+      const currentHeight = await ethers.provider.getBlockNumber();
+      expect(Number(endHeight)).to.be.be.greaterThan(Number(currentHeight));
+    });
+    it("cannot repeat startRound", async () => {
+      expect(schneeball.startRound()).to.be.reverted;
+    });
+    it("cannot end round", async () => {
+      expect(schneeball.endRound()).to.be.reverted;
+    });
+    it("mint successfully", async () => {
+      const userAddress = users[0].address;
+      const mintTx = await schneeball.mint(userAddress, { value: MINT_FEE });
+      await mintTx.wait();
+      const balance = await schneeball["balanceOf(address)"](userAddress);
+      expect(Number(balance)).to.equal(2);
+
+      // Genesis snowball
+      const genesislevel = await schneeball["getLevel(uint256)"](1);
+      expect(Number(genesislevel)).to.equal(1);
+
+      // Minted snowball
+      const level = await schneeball["getLevel(uint256)"](2);
+      expect(Number(level)).to.equal(1);
+      const totalSupply = await schneeball["totalSupply()"]();
+      expect(Number(totalSupply)).to.equal(2);
+    });
+    it("can toss successfully", async () => {
+      const userAddress = users[0].address;
+      const partnerAddress = users[1].address;
+      const partner2Address = users[2].address;
+      let cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(false);
+      let timeout = await schneeball.isTimedOut(userAddress);
+      expect(timeout).to.equal(false);
+      timeout = await schneeball.isTimedOut(partnerAddress);
+      expect(timeout).to.equal(false);
+      let tossTx = await schneeball.connect(users[0]).toss(partnerAddress, 1, {
+        value: TOSS_FEE(1),
+      });
+      await tossTx.wait();
+      let balance = await schneeball["balanceOf(address)"](partnerAddress);
+      expect(Number(balance)).to.equal(1);
+      balance = await schneeball["balanceOf(address)"](userAddress);
+      expect(Number(balance)).to.equal(2);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(true);
+      timeout = await schneeball.isTimedOut(userAddress);
+      expect(timeout).to.equal(false);
+      timeout = await schneeball.isTimedOut(partnerAddress);
+      expect(timeout).to.equal(true);
+
+      // mine 90 blocks
+      await hardhat.network.provider.send("hardhat_mine", ["0x5A", "0x2"]);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(false);
+      timeout = await schneeball.isTimedOut(partner2Address);
+      expect(timeout).to.equal(false);
+
+      tossTx = await schneeball.connect(users[0]).toss(partner2Address, 1, {
+        value: TOSS_FEE(1),
+      });
+      await tossTx.wait();
+      balance = await schneeball["balanceOf(address)"](partner2Address);
+      expect(Number(balance)).to.greaterThanOrEqual(1);
+      cooldown = await schneeball.isOnCooldown(userAddress);
+      expect(cooldown).to.equal(true);
+      timeout = await schneeball.isTimedOut(partner2Address);
+      expect(timeout).to.equal(true);
+    });
+    it("cannot toss in cooldown", async () => {
+      const partner3Address = users[3].address;
+      const tossTx = schneeball.connect(users[0]).toss(partner3Address, 1, {
+        value: TOSS_FEE(1),
+      });
+      await expect(tossTx).to.revertedWith("Cooldown");
+    });
+    it("cannot toss on timeout", async () => {
+      const partnerAddress = users[3].address;
+      const tossTx = schneeball.connect(users[1]).toss(partnerAddress, 1, {
+        value: TOSS_FEE(1),
+      });
+      await expect(tossTx).to.revertedWith("Timeout");
     });
   });
 });

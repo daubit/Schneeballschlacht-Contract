@@ -9,7 +9,6 @@ import "./HallOfFame.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-// TODO: calc ban hit when throwing snowball
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
@@ -19,7 +18,8 @@ contract Schneeballschlacht is
     using Strings for uint8;
     uint8 private constant MAX_LEVEL = 20;
     // ~3 min at 1 Block / 2 secs, block times vary slightly from 2 secs
-    uint8 private constant TIMEOUT_BLOCK_LENGTH = 90;
+    uint16 private constant TIMEOUT_BLOCK_LENGTH = 43200; // 24h
+    uint8 private constant COOLDOWN_BLOCK_LENGTH = 90; // 3 mins
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
     bool private _finished;
@@ -34,6 +34,9 @@ contract Schneeballschlacht is
 
     // map holder address to timeout start blocknumber, defaults to 0
     mapping(address => uint256) private _timeoutStart;
+
+    // map holder address to cooldown start blocknumber, defaults to 0
+    mapping(address => uint256) private _cooldownStart;
 
     event Mint(address indexed to);
 
@@ -66,9 +69,10 @@ contract Schneeballschlacht is
         _;
     }
 
-    modifier senderNotTimeouted() {
+    modifier senderNotTimeoutedOrOnCooldown() {
         uint256 roundStart = getStartHeight();
-        require(_timeoutStart[msg.sender] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[msg.sender] <= roundStart, "Timeout");
+        require(_timeoutStart[msg.sender] + TIMEOUT_BLOCK_LENGTH <= block.number || _timeoutStart[msg.sender] <= roundStart, "Timeout");
+        require(_cooldownStart[msg.sender] + COOLDOWN_BLOCK_LENGTH <= block.number || _cooldownStart[msg.sender] <= roundStart, "Cooldown");
         _;
     }
 
@@ -236,7 +240,7 @@ contract Schneeballschlacht is
         payable
         whenNotPaused
         isTransferable(tokenId, to)
-        senderNotTimeouted
+        senderNotTimeoutedOrOnCooldown
     {
         require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
         require(to != msg.sender, "Error: Self Toss");
@@ -255,6 +259,7 @@ contract Schneeballschlacht is
         });
         _snowballs[roundId][tokenId].partners.push(newTokenId);
         _tosses[roundId]++;
+        _cooldownStart[msg.sender] = block.number;
 
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         require(amountOfPartners <= level + 1, "No throws left");
@@ -515,10 +520,15 @@ contract Schneeballschlacht is
 
     function isTimedOut(address addr) external view returns (bool) {
         uint256 roundStart = getStartHeight();
-        return !(_timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number && _timeoutStart[addr] <= roundStart);
+        return !(_timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number || _timeoutStart[addr] <= roundStart);
     }
 
-    function hasStone(uint8 level) internal view returns (bool) {
+    function isOnCooldown(address addr) external view returns (bool) {
+        uint256 roundStart = getStartHeight();
+        return !(_cooldownStart[addr] + COOLDOWN_BLOCK_LENGTH <= block.number || _cooldownStart[addr] <= roundStart);
+    }
+
+    function hasStone(uint8 level) internal virtual view returns (bool) {
         // level 1 -> 1 /1000 level 2 -> 2 / 1000 etc
         // randomIndex returns [0...parameter - 1] because it uses modulo internally
         // so len([0...parameter - 1]) == parameter 
