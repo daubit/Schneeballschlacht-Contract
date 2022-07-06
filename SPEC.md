@@ -33,6 +33,10 @@ A max level - 1 NFT that levels up(e.g a max level NFT would be created) ends th
 
 Throwing a NFT cost a small amount of token(small USD price) scaled linear with NFT level.
 
+Cooldown: After throwing a Snowball the Account cannot throw another snowball for ~3 minutes.
+
+Stone: A Snowball being thrown has a 0,1% \* LEVEL(specific formula is wip) chance of containing a stone, this chance is reevaluated every throw. If a snowball contains a stone the the address it is thrown to is timeouted for 24 hours.
+
 ### Payout
 
 Payout is calculated a follows, 1 level on an NFT gives the right to 1 share of the payout. e.g. payoutPerLevel = balance / sum(levels)
