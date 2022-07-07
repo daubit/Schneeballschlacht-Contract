@@ -30,9 +30,6 @@ const config: HardhatUserConfig = {
   },
 
   networks: {
-    development: {
-      url: "http://127.0.0.1:7545/",
-    },
     mumbai: { url: mumbaiNodeUrl, accounts: { mnemonic: MNEMONIC } },
     polygon: { url: polygonNodeUrl, accounts: { mnemonic: MNEMONIC } },
   },
