@@ -103,7 +103,22 @@ contract SchneeballSchlachtTest is ISchneeballschlacht {
         _payoutPerToss[roundId] = amount;
     }
 
-    function getWinner(uint256 roundId) public view returns (address) {}
+    mapping(uint256 => address) private _winners;
+    mapping(uint256 => uint256) private _winnerBonus;
 
-    function getWinnerBonus(uint256 roundId) public view returns (uint256) {}
+    function getWinner(uint256 roundId) public view returns (address) {
+        return _winners[roundId];
+    }
+
+    function getWinnerBonus(uint256 roundId) public view returns (uint256) {
+        return _winnerBonus[roundId];
+    }
+
+    function setWinner(uint256 roundId, address w) public {
+        _winners[roundId] = w;
+    }
+
+    function setWinnerBonus(uint256 roundId, uint256 bonus) public {
+        _winnerBonus[roundId] = bonus;
+    }
 }
