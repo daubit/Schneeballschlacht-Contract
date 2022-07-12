@@ -115,7 +115,8 @@ abstract contract ERC721Round is
         returns (uint256)
     {
         require(owner != address(0), "Error: zero address");
-        require(roundId > 0, "No Round started yet!");
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId, "No Round started yet!");
         return _balances[roundId][owner];
     }
 
@@ -130,9 +131,9 @@ abstract contract ERC721Round is
         returns (address)
     {
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "Error: Invalid token");
-        require(roundId > 0, "No Round started yet!");
         return owner;
     }
 
@@ -141,9 +142,10 @@ abstract contract ERC721Round is
         view
         returns (address)
     {
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "Error: Invalid token");
-        require(roundId > 0, "No Round started yet!");
         return owner;
     }
 
@@ -216,9 +218,9 @@ abstract contract ERC721Round is
         override
         returns (address)
     {
-        _requireMinted(tokenId);
         uint256 roundId = getRoundId();
         require(roundId > 0, "No Round started yet!");
+        _requireMinted(tokenId);
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -227,8 +229,9 @@ abstract contract ERC721Round is
         view
         returns (address)
     {
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
         _requireMinted(tokenId);
-        require(roundId > 0, "No Round started yet!");
         return _tokenApprovals[roundId][tokenId];
     }
 
@@ -262,7 +265,8 @@ abstract contract ERC721Round is
         address owner,
         address operator
     ) external view returns (bool) {
-        require(roundId > 0, "No Round started yet!");
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
         return _operatorApprovals[roundId][owner][operator];
     }
 

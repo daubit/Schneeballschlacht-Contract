@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber, constants, Contract } from "ethers";
 import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
 
@@ -77,6 +77,20 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
     });
+    it("erc721 round methods revert before first round", async () => {
+      await expect(schneeball["ownerOf(uint256)"](1)).to.revertedWith(
+        "No Round started yet!"
+      );
+      await expect(
+        schneeball["ownerOf(uint256,uint256)"](1, 1)
+      ).to.revertedWith("No Round started yet!");
+      await expect(
+        schneeball["balanceOf(address)"](users[0].address)
+      ).to.revertedWith("No Round started yet!");
+      await expect(
+        schneeball["balanceOf(uint256,address)"](2, users[0].address)
+      ).to.revertedWith("No Round started yet!");
+    });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
@@ -106,6 +120,45 @@ describe("Schneeballschlacht", async () => {
       expect(Number(level)).to.equal(1);
       const totalSupply = await schneeball["totalSupply()"]();
       expect(Number(totalSupply)).to.equal(2);
+    });
+    it("ownerOf is correct", async () => {
+      const ownerOf1 = await schneeball["ownerOf(uint256)"](1);
+      const ownerOf2 = await schneeball["ownerOf(uint256,uint256)"](1, 1);
+
+      expect(ownerOf1).to.equal(users[0].address);
+      expect(ownerOf2).to.equal(users[0].address);
+
+      await expect(schneeball["ownerOf(uint256)"](3)).to.revertedWith(
+        "Error: Invalid token"
+      );
+      await expect(
+        schneeball["ownerOf(uint256,uint256)"](1, 3)
+      ).to.revertedWith("Error: Invalid token");
+      await expect(
+        schneeball["ownerOf(uint256,uint256)"](2, 1)
+      ).to.revertedWith("No Round started yet!");
+    });
+    it("balanceOf is correct", async () => {
+      const balanceOf1 = await schneeball["balanceOf(address)"](
+        users[0].address
+      );
+      const balanceOf2 = await schneeball["balanceOf(uint256,address)"](
+        1,
+        users[0].address
+      );
+
+      expect(balanceOf1).to.equal(2);
+      expect(balanceOf2).to.equal(2);
+
+      await expect(
+        schneeball["balanceOf(address)"](constants.AddressZero)
+      ).to.revertedWith("Error: zero address");
+      await expect(
+        schneeball["balanceOf(uint256,address)"](1, constants.AddressZero)
+      ).to.revertedWith("Error: zero address");
+      await expect(
+        schneeball["balanceOf(uint256,address)"](2, users[0].address)
+      ).to.revertedWith("No Round started yet!");
     });
     it("cannot mint with insufficient fee", async () => {
       const userAddress = users[0].address;
@@ -234,9 +287,36 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
       await schneeball.deployed();
     });
+    it("erc721 fails before first round", async () => {
+      await expect(schneeball["getApproved(uint256)"](1)).to.revertedWith(
+        "No Round started yet!"
+      );
+      await expect(
+        schneeball["getApproved(uint256,uint256)"](1, 1)
+      ).to.revertedWith("No Round started yet!");
+
+      await expect(
+        schneeball.connect(users[1]).setApprovalForAll(users[0].address, true)
+      ).to.revertedWith("No Round started yet!");
+      await expect(
+        schneeball["isApprovedForAll(uint256,address,address)"](
+          1,
+          users[1].address,
+          users[0].address
+        )
+      ).to.revertedWith("No Round started yet!");
+    });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
+    });
+    it("tokenUri works", async () => {
+      const tokenURI1 = await schneeball["tokenURI(uint256)"](1);
+      const tokenURI2 = await schneeball["tokenURI(uint256,uint256)"](1, 1);
+
+      // TODO: deploy folder to ipfs
+      expect(tokenURI1).to.equal("ipfs://1");
+      expect(tokenURI2).to.equal("ipfs://1");
     });
     it("can transfer", async () => {
       const transferTx = await schneeball.transferFrom(
@@ -256,8 +336,63 @@ describe("Schneeballschlacht", async () => {
         .connect(users[1])
         .approve(users[0].address, 1);
       await transferTx.wait();
-      const approvedAddress = await schneeball["getApproved(uint256)"](1);
-      expect(approvedAddress).to.be.equal(users[0].address);
+      const approvedAddress1 = await schneeball["getApproved(uint256)"](1);
+      expect(approvedAddress1).to.be.equal(users[0].address);
+      const approvedAddress2 = await schneeball["getApproved(uint256,uint256)"](
+        1,
+        1
+      );
+      expect(approvedAddress2).to.be.equal(users[0].address);
+
+      await expect(
+        schneeball.connect(users[1]).approve(users[1].address, 1)
+      ).to.revertedWith("ERC721: approval to current owner");
+      await expect(
+        schneeball.connect(users[0]).approve(users[0].address, 1)
+      ).to.revertedWith(
+        "ERC721: approve caller is not token owner nor approved for all"
+      );
+      await expect(
+        schneeball["getApproved(uint256,uint256)"](2, 1)
+      ).to.revertedWith("No Round started yet!");
+      await expect(
+        schneeball["getApproved(uint256,uint256)"](1, 2)
+      ).to.revertedWith("ERC721: invalid token ID");
+      await expect(schneeball["getApproved(uint256)"](2)).to.revertedWith(
+        "ERC721: invalid token ID"
+      );
+    });
+    it("can approve for all", async () => {
+      let transferTx = await schneeball
+        .connect(users[1])
+        .setApprovalForAll(users[0].address, true);
+      await transferTx.wait();
+      let approvedAddress1 = await schneeball[
+        "isApprovedForAll(address,address)"
+      ](users[1].address, users[0].address);
+      expect(approvedAddress1).to.be.true;
+      let approvedAddress2 = await schneeball[
+        "isApprovedForAll(uint256,address,address)"
+      ](1, users[1].address, users[0].address);
+      expect(approvedAddress2).to.be.true;
+
+      transferTx = await schneeball
+        .connect(users[1])
+        .setApprovalForAll(users[0].address, false);
+      await transferTx.wait();
+      approvedAddress1 = await schneeball["isApprovedForAll(address,address)"](
+        users[1].address,
+        users[0].address
+      );
+      expect(approvedAddress1).to.be.false;
+      approvedAddress2 = await schneeball[
+        "isApprovedForAll(uint256,address,address)"
+      ](1, users[1].address, users[0].address);
+      expect(approvedAddress2).to.be.false;
+
+      await expect(
+        schneeball.connect(users[1]).setApprovalForAll(users[1].address, true)
+      ).to.revertedWith("ERC721: approve to caller");
     });
     it("Contract has correct amount of payout", async () => {
       const balance = await ethers.provider.getBalance(schneeball.address);
