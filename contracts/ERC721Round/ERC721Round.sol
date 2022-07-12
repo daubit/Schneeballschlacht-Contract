@@ -66,6 +66,12 @@ abstract contract ERC721Round is
 
     event Winner(uint256 indexed roundId, address indexed player);
 
+    modifier roundIsValid(uint256 roundId) {
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
+        _;
+    }
+
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
      */
@@ -112,11 +118,10 @@ abstract contract ERC721Round is
         public
         view
         virtual
+        roundIsValid(roundId)
         returns (uint256)
     {
         require(owner != address(0), "Error: zero address");
-        uint256 _roundId = getRoundId();
-        require(roundId > 0 && roundId <= _roundId, "No Round started yet!");
         return _balances[roundId][owner];
     }
 
@@ -140,10 +145,9 @@ abstract contract ERC721Round is
     function ownerOf(uint256 roundId, uint256 tokenId)
         external
         view
+        roundIsValid(roundId)
         returns (address)
     {
-        uint256 _roundId = getRoundId();
-        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
         address owner = _owners[roundId][tokenId];
         require(owner != address(0), "Error: Invalid token");
         return owner;
@@ -227,10 +231,9 @@ abstract contract ERC721Round is
     function getApproved(uint256 roundId, uint256 tokenId)
         external
         view
+        roundIsValid(roundId)
         returns (address)
     {
-        uint256 _roundId = getRoundId();
-        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
         _requireMinted(tokenId);
         return _tokenApprovals[roundId][tokenId];
     }
@@ -264,9 +267,7 @@ abstract contract ERC721Round is
         uint256 roundId,
         address owner,
         address operator
-    ) external view returns (bool) {
-        uint256 _roundId = getRoundId();
-        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
+    ) external view roundIsValid(roundId) returns (bool) {
         return _operatorApprovals[roundId][owner][operator];
     }
 
@@ -278,7 +279,6 @@ abstract contract ERC721Round is
         address to,
         uint256 tokenId
     ) public virtual override {
-        //solhint-disable-next-line max-line-length
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             "Error: Unauthorized!"
@@ -654,32 +654,33 @@ abstract contract ERC721Round is
         return _rounds[roundId].startHeight;
     }
 
-    function getStartHeight(uint256 roundId) external view returns (uint256) {
-        require(roundId > 0, "No Round started yet!");
+    function getStartHeight(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
         return _rounds[roundId].startHeight;
     }
 
+    // TODO: this seem like it would always be 0x0 except for the time between rounds
     function getEndHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
         require(roundId > 0, "No Round started yet!");
         return _rounds[roundId].endHeight;
     }
 
-    function getEndHeight(uint256 roundId) external view returns (uint256) {
-        require(roundId > 0, "No Round started yet!");
+    function getEndHeight(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
         return _rounds[roundId].endHeight;
     }
 
+    // TODO: this seem like it would always be 0x0 except for the time between rounds
     function getWinner() public view returns (address) {
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         return _rounds[roundId].winner;
     }
 
-    function getWinner(uint256 roundId) public view returns (address) {
+    function getWinner(uint256 roundId) public view roundIsValid(roundId) returns (address) {
         return _rounds[roundId].winner;
     }
 
-    function getWinnerBonus(uint256 roundId) public view returns (uint256) {
+    function getWinnerBonus(uint256 roundId) public view roundIsValid(roundId) returns (uint256) {
         return _rounds[roundId].winnerBonus;
     }
 
@@ -690,7 +691,7 @@ abstract contract ERC721Round is
         emit Winner(roundId, winner);
     }
 
-    function getPayoutPerToss(uint256 roundId) external view returns (uint256) {
+    function getPayoutPerToss(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
         return _rounds[roundId].payoutPerToss;
     }
 
@@ -752,19 +753,20 @@ abstract contract ERC721Round is
     }
 
     function getTokenOwner(
-        uint256 round,
+        uint256 roundId,
         address addr,
         uint256 index
-    ) public view virtual returns (uint256) {
-        return _tokenOwners[round][addr][index];
+    ) public view virtual roundIsValid(roundId) returns (uint256) {
+        return _tokenOwners[roundId][addr][index];
     }
 
     function getPayout() external view returns (uint256) {
         uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started yet!");
         return _rounds[roundId].totalPayout;
     }
 
-    function getPayout(uint256 roundId) external view returns (uint256) {
+    function getPayout(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
         return _rounds[roundId].totalPayout;
     }
 }

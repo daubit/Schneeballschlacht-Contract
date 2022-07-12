@@ -120,6 +120,10 @@ describe("Schneeballschlacht", async () => {
       expect(Number(level)).to.equal(1);
       const totalSupply = await schneeball["totalSupply()"]();
       expect(Number(totalSupply)).to.equal(2);
+
+      await expect(
+        schneeball.mint(constants.AddressZero, { value: MINT_FEE })
+      ).to.revertedWith("ERC721: mint to the zero address");
     });
     it("ownerOf is correct", async () => {
       const ownerOf1 = await schneeball["ownerOf(uint256)"](1);
@@ -324,31 +328,65 @@ describe("Schneeballschlacht", async () => {
         users[1].address,
         1
       );
-      let balance;
       await transferTx.wait();
-      balance = await schneeball["balanceOf(address)"](users[0].address);
+      let balance = await schneeball["balanceOf(address)"](users[0].address);
       expect(Number(balance)).to.equal(0);
       balance = await schneeball["balanceOf(address)"](users[1].address);
       expect(Number(balance)).to.equal(1);
+
+      await expect(
+        schneeball
+          .connect(users[0])
+          .transferFrom(users[1].address, users[0].address, 1)
+      ).to.revertedWith("Error: Unauthorized!");
+      await expect(
+        schneeball
+          .connect(users[1])
+          .transferFrom(users[1].address, constants.AddressZero, 1)
+      ).to.revertedWith("Error: zero address");
+    });
+    it("can safeTransfer", async () => {
+      const transferTx = await schneeball
+        .connect(users[1])
+        ["safeTransferFrom(address,address,uint256)"](
+          users[1].address,
+          users[0].address,
+          1
+        );
+      await transferTx.wait();
+      let balance = await schneeball["balanceOf(address)"](users[1].address);
+      expect(Number(balance)).to.equal(0);
+      balance = await schneeball["balanceOf(address)"](users[0].address);
+      expect(Number(balance)).to.equal(1);
+
+      await expect(
+        schneeball
+          .connect(users[1])
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            users[2].address,
+            1
+          )
+      ).to.revertedWith("Error: Unauthorized!");
     });
     it("can approve", async () => {
       const transferTx = await schneeball
-        .connect(users[1])
-        .approve(users[0].address, 1);
+        .connect(users[0])
+        .approve(users[1].address, 1);
       await transferTx.wait();
       const approvedAddress1 = await schneeball["getApproved(uint256)"](1);
-      expect(approvedAddress1).to.be.equal(users[0].address);
+      expect(approvedAddress1).to.be.equal(users[1].address);
       const approvedAddress2 = await schneeball["getApproved(uint256,uint256)"](
         1,
         1
       );
-      expect(approvedAddress2).to.be.equal(users[0].address);
+      expect(approvedAddress2).to.be.equal(users[1].address);
 
       await expect(
-        schneeball.connect(users[1]).approve(users[1].address, 1)
+        schneeball.connect(users[0]).approve(users[0].address, 1)
       ).to.revertedWith("ERC721: approval to current owner");
       await expect(
-        schneeball.connect(users[0]).approve(users[0].address, 1)
+        schneeball.connect(users[1]).approve(users[2].address, 1)
       ).to.revertedWith(
         "ERC721: approve caller is not token owner nor approved for all"
       );
@@ -490,8 +528,16 @@ describe("Schneeballschlacht", async () => {
       // Minted snowball
       const level = await schneeball["getLevel(uint256)"](2);
       expect(Number(level)).to.equal(1);
-      const totalSupply = await schneeball["totalSupply()"]();
-      expect(Number(totalSupply)).to.equal(2);
+      const totalSupply1 = await schneeball["totalSupply()"]();
+      expect(Number(totalSupply1)).to.equal(2);
+      const totalSupply2 = await schneeball["totalSupply(uint256)"](1);
+      expect(Number(totalSupply2)).to.equal(2);
+      await expect(schneeball["totalSupply(uint256)"](2)).to.revertedWith(
+        "Invalid id"
+      );
+      await expect(schneeball["totalSupply(uint256)"](0)).to.revertedWith(
+        "Invalid id"
+      );
     });
     it("can toss successfully", async () => {
       const userAddress = users[0].address;
