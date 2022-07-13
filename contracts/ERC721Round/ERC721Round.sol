@@ -174,28 +174,20 @@ abstract contract ERC721Round is
         public
         view
         virtual
-        returns (string memory)
-    {
-        return string(abi.encodePacked(_baseURI(), tokenId));
-    }
+        returns (string memory);
 
     function tokenURI(uint256, uint256 tokenId)
         external
         view
         virtual
-        returns (string memory)
-    {
-        return string(abi.encodePacked(_baseURI(), tokenId));
-    }
+        returns (string memory);
 
     /**
      * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
      * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
      * by default, can be overridden in child contracts.
      */
-    function _baseURI() internal view virtual returns (string memory) {
-        return "";
-    }
+    function _baseURI() internal view virtual returns (string memory);
 
     /**
      * @dev See {IERC721-approve}.

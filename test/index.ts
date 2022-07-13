@@ -369,6 +369,40 @@ describe("Schneeballschlacht", async () => {
           )
       ).to.revertedWith("Error: Unauthorized!");
     });
+    it("can safeTransfer to contract", async () => {
+      const NoReceiverTest = await ethers.getContractFactory("NoReceiverTest");
+      const noReceiverTest = await NoReceiverTest.deploy();
+      await noReceiverTest.deployed();
+
+      const ReceiverTest = await ethers.getContractFactory("Receiver");
+      const receiverTest = await ReceiverTest.deploy();
+      await receiverTest.deployed();
+
+      const WIReceiverTest = await ethers.getContractFactory(
+        "ReceiverWrongImpl"
+      );
+      const wiReceiverTest = await WIReceiverTest.deploy();
+      await wiReceiverTest.deployed();
+
+      await expect(
+        schneeball
+          .connect(users[0])
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            noReceiverTest.address,
+            1
+          )
+      ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
+      await expect(
+        schneeball
+          .connect(users[0])
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            wiReceiverTest.address,
+            1
+          )
+      ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
+    });
     it("can approve", async () => {
       const transferTx = await schneeball
         .connect(users[0])
