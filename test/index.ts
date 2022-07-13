@@ -8,6 +8,18 @@ import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
 
 const ethers = hardhat.ethers;
 
+type SnowballStructOutput = [number, BigNumber[], BigNumber] & {
+  level: number;
+  partners: BigNumber[];
+  parentSnowballId: BigNumber;
+};
+
+type QueryStructOutput = [string, number, BigNumber] & {
+  player: string;
+  level: number;
+  tokenId: BigNumber;
+};
+
 describe("Schneeballschlacht", async () => {
   before(async () => {
     // mine 43200 blocks
@@ -64,6 +76,108 @@ describe("Schneeballschlacht", async () => {
     });
     it("endRound is locked", async () => {
       expect(schneeball.endRound()).to.be.reverted;
+    });
+  });
+
+  describe("Getters and Querys", () => {
+    before(async () => {
+      // Setting up accounts
+      users = await ethers.getSigners();
+
+      // Deploy Schneeballschlacht
+      const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      await schneeball.deployed();
+    });
+    it("can start successfully", async () => {
+      const startTx = await schneeball.startRound();
+      await startTx.wait();
+      const endHeight = await schneeball["getEndHeight()"]();
+      const currentHeight = await ethers.provider.getBlockNumber();
+      expect(Number(endHeight)).to.be.be.greaterThan(Number(currentHeight));
+    });
+    it("mint successfully", async () => {
+      const userAddress = users[0].address;
+      const mintTx = await schneeball.mint(userAddress, { value: MINT_FEE });
+      await mintTx.wait();
+      const balance = await schneeball["balanceOf(address)"](userAddress);
+      expect(Number(balance)).to.equal(2);
+
+      // Genesis snowball
+      const genesislevel = await schneeball["getLevel(uint256)"](1);
+      expect(Number(genesislevel)).to.equal(1);
+
+      // Minted snowball
+      const level = await schneeball["getLevel(uint256)"](2);
+      expect(Number(level)).to.equal(1);
+      const totalSupply = await schneeball["totalSupply()"]();
+      expect(Number(totalSupply)).to.equal(2);
+    });
+    it("getSnowballsOfAddress", async () => {
+      const userAddress = users[0].address;
+      let snowballs: SnowballStructOutput[] = await schneeball[
+        "getSnowballsOfAddress(address)"
+      ](userAddress);
+      expect(snowballs.length).to.equal(2);
+      expect(snowballs[0].level).to.equal(1);
+      expect(snowballs[1].level).to.equal(1);
+      expect(snowballs[0].partners.length).to.equal(0);
+      expect(snowballs[1].partners.length).to.equal(0);
+      expect(snowballs[0].parentSnowballId).to.equal(0);
+      expect(snowballs[1].parentSnowballId).to.equal(0);
+
+      const tossTx = await schneeball
+        .connect(users[0])
+        .toss(users[1].address, 1, {
+          value: TOSS_FEE(1),
+        });
+      await tossTx.wait();
+
+      snowballs = await schneeball["getSnowballsOfAddress(address)"](
+        userAddress
+      );
+      expect(snowballs.length).to.equal(2);
+      expect(snowballs[0].level).to.equal(1);
+      expect(snowballs[1].level).to.equal(1);
+      expect(snowballs[0].partners.length).to.equal(1);
+      expect(snowballs[0].partners[0]).to.equal(3);
+      expect(snowballs[1].partners.length).to.equal(0);
+      expect(snowballs[0].parentSnowballId).to.equal(0);
+      expect(snowballs[1].parentSnowballId).to.equal(0);
+
+      // TODO: check parentSnowballId for levelup
+    });
+
+    it("getTokens", async () => {
+      const userAddress = users[0].address;
+      let query: QueryStructOutput[] = await schneeball[
+        "getTokens(uint256,uint256)"
+      ](0, 0);
+      expect(query.length).to.equal(1);
+      expect(query[0].player).to.equal(userAddress);
+      expect(query[0].tokenId).to.equal(1);
+      expect(query[0].level).to.equal(1);
+
+      query = await schneeball["getTokens(uint256,uint256)"](0, 1);
+      expect(query.length).to.equal(2);
+      expect(query[0].player).to.equal(userAddress);
+      expect(query[0].tokenId).to.equal(1);
+      expect(query[0].level).to.equal(1);
+      expect(query[1].player).to.equal(userAddress);
+      expect(query[1].tokenId).to.equal(2);
+      expect(query[1].level).to.equal(1);
+
+      query = await schneeball["getTokens(uint256,uint256)"](0, 5);
+      expect(query.length).to.equal(2);
+
+      query = await schneeball["getTokens(uint256,uint256)"](0, 0);
+      expect(query.length).to.equal(1);
+
+      query = await schneeball["getTokens(uint256,uint256)"](1, 0);
+      expect(query.length).to.equal(1);
+      expect(query[0].player).to.equal(userAddress);
+      expect(query[0].tokenId).to.equal(1);
+      expect(query[0].level).to.equal(1);
     });
   });
 
