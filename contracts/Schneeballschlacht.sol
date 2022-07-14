@@ -16,7 +16,7 @@ contract Schneeballschlacht is
   Pausable
 {
   using Strings for uint8;
-  uint8 private constant MAX_LEVEL = 20;
+  uint8 private immutable MAX_LEVEL;
   // ~3 min at 1 Block / 2 secs, block times vary slightly from 2 secs
   uint16 private constant TIMEOUT_BLOCK_LENGTH = 43200; // 24h
   uint8 private constant COOLDOWN_BLOCK_LENGTH = 90; // 3 mins
@@ -49,10 +49,11 @@ contract Schneeballschlacht is
     address indexed to
   );
 
-  constructor(address hof) ERC721Round("Schneeballschlacht", "Schneeball") {
+  constructor(address hof, uint8 maxLevel) ERC721Round("Schneeballschlacht", "Schneeball") {
     _pause();
     _hof = HallOfFame(hof);
     _finished = false;
+    MAX_LEVEL = maxLevel;
   }
 
   modifier whenFinished() {
@@ -274,7 +275,6 @@ contract Schneeballschlacht is
       _timeoutStart[to] = block.number;
       emit Timeout(msg.sender, tokenId, to);
     }
-
     // Next level up also mints randomly
     if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
       _levelup(to, tokenId);

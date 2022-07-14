@@ -5,7 +5,7 @@ pragma solidity 0.8.15;
 import "../Schneeballschlacht.sol";
 
 contract SchneeballSchlachtTimeoutTest is Schneeballschlacht {
-    constructor(address hof) Schneeballschlacht(hof) {
+    constructor(address hof) Schneeballschlacht(hof, 20) {
     }
     
     function hasStone(uint8 level) internal override view returns (bool) {
