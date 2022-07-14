@@ -17,20 +17,25 @@ contract Schneeballschlacht is
     Pausable
 {
     using Strings for uint8;
-    uint8 private constant MAX_LEVEL = 20;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
+    uint8 private constant MAX_LEVEL = 20;
     bool private _finished;
 
     HallOfFame private _hof;
 
-    // Mapping roundId to tokenId ID to snowball
+    // Mapping roundId to tokenId to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
+
+    /**
+     * @dev Mapping from tokenId to address.
+     * Used for keeping track who the last holder of a snowball was.
+     * So that events are logged correctly when a snowball is minted a new owner arises in the current round
+     */
+    mapping(uint256 => address) private _lastHolder;
 
     // Mapping roundId to totalTosses
     mapping(uint256 => uint256) private _tosses;
-
-    event Mint(address indexed to);
 
     event Toss(
         address indexed from,
@@ -173,8 +178,7 @@ contract Schneeballschlacht is
      */
     function mint(address to) public payable whenNotPaused {
         require(msg.value == MINT_FEE, "Insufficient fee!");
-        _mint(to);
-        emit Mint(to);
+        _mint(to, 1, 0);
     }
 
     /**
@@ -184,7 +188,7 @@ contract Schneeballschlacht is
     function startRound() public override(ISchneeballschlacht) whenPaused {
         _unpause();
         _startRound();
-        _mint(msg.sender);
+        _mint(msg.sender, 1, 0);
     }
 
     /**
@@ -232,14 +236,7 @@ contract Schneeballschlacht is
         uint8 level = _snowballs[roundId][tokenId].level;
         require(msg.value == TOSS_FEE * level, "Insufficient fee!");
 
-        uint256 newTokenId = _newTokenId();
-        _safeMint(to, newTokenId);
-
-        _snowballs[roundId][newTokenId] = Snowball({
-            level: level,
-            parentSnowballId: tokenId,
-            partners: new uint256[](0)
-        });
+        uint256 newTokenId = _mint(to, level, tokenId);
         _snowballs[roundId][tokenId].partners.push(newTokenId);
         _tosses[roundId]++;
 
@@ -252,14 +249,8 @@ contract Schneeballschlacht is
         }
         // Last snowball is minted => game is over
         else if (level < MAX_LEVEL && amountOfPartners == level + 1) {
-            uint256 winnerTokenId = _newTokenId();
-            _safeMint(msg.sender, winnerTokenId);
-            _snowballs[roundId][winnerTokenId] = Snowball({
-                level: MAX_LEVEL,
-                parentSnowballId: tokenId,
-                partners: new uint256[](0)
-            });
             // End Game
+            _mint(msg.sender, MAX_LEVEL, tokenId);
             _finish();
         }
         emit Toss(msg.sender, to, tokenId);
@@ -388,15 +379,23 @@ contract Schneeballschlacht is
      *
      * @param to address
      */
-    function _mint(address to) internal {
+    function _mint(
+        address to,
+        uint8 level,
+        uint256 parentSnowballId
+    ) internal returns (uint256) {
         uint256 roundId = getRoundId();
         uint256 tokenId = _newTokenId();
         _safeMint(to, tokenId);
         _snowballs[roundId][tokenId] = Snowball({
-            level: 1,
+            level: level,
             partners: new uint256[](0),
-            parentSnowballId: 0
+            parentSnowballId: parentSnowballId
         });
+        address lastHolder = _lastHolder[tokenId];
+        _lastHolder[tokenId] = to;
+        emit Transfer(lastHolder, to, tokenId);
+        return tokenId;
     }
 
     /**
