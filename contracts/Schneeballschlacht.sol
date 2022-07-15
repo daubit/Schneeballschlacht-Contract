@@ -159,12 +159,12 @@ contract Schneeballschlacht is
         uint256 i;
         Query[] memory result = new Query[](to - from + 1);
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {
-            uint8 level = _snowballs[roundId][tokenId].level;
             address player = ownerOf(tokenId);
+            uint8 level = _snowballs[roundId][tokenId].level;
             Query memory query = Query({
+                level: level,
                 player: player,
-                tokenId: tokenId,
-                level: level
+                tokenId: tokenId
             });
             result[i++] = query;
         }
@@ -423,13 +423,7 @@ contract Schneeballschlacht is
         // toss handles level up to max since it ends the game
         // otherwise level up in here
         if (randLevel + 1 < MAX_LEVEL) {
-            uint256 upgradedTokenId = _newTokenId();
-            _safeMint(to, upgradedTokenId);
-            _snowballs[roundId][upgradedTokenId] = Snowball({
-                level: randLevel + 1,
-                partners: new uint256[](0),
-                parentSnowballId: tokenId
-            });
+            uint256 upgradedTokenId = _mint(to, randLevel + 1, tokenId);
             emit LevelUp(roundId, upgradedTokenId);
         }
     }
@@ -487,7 +481,7 @@ contract Schneeballschlacht is
         _pause();
         _finished = true;
         _setWinner(msg.sender);
-        // _hof.mint(msg.sender);
+        _hof.mint(msg.sender);
     }
 
     function _baseURI() internal pure override returns (string memory) {
