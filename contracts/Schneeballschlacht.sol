@@ -56,6 +56,13 @@ contract Schneeballschlacht is
         _;
     }
 
+    modifier whenNotFinished() {
+        if (block.number >= getEndHeight()) {
+            _end();
+        }
+        _;
+    }
+
     modifier isTransferable(uint256 tokenId, address to) {
         uint256 roundId = getRoundId();
         uint256[] memory partners = _snowballs[roundId][tokenId].partners;
@@ -176,8 +183,8 @@ contract Schneeballschlacht is
      *
      * @param to address to send the snowball to
      */
-    function mint(address to) public payable whenNotPaused {
-        require(msg.value == MINT_FEE, "Insufficient fee!");
+    function mint(address to) public payable whenNotFinished whenNotPaused {
+        require(msg.value == MINT_FEE, "Error: Insufficient fee!");
         _mint(to, 1, 0);
     }
 
@@ -226,6 +233,7 @@ contract Schneeballschlacht is
     function toss(address to, uint256 tokenId)
         external
         payable
+        whenNotFinished
         whenNotPaused
         isTransferable(tokenId, to)
     {
@@ -267,7 +275,7 @@ contract Schneeballschlacht is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round) whenNotPaused {
+    ) public virtual override(ERC721Round) whenNotFinished whenNotPaused {
         super.transferFrom(from, to, tokenId);
     }
 
@@ -275,7 +283,7 @@ contract Schneeballschlacht is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override(ERC721Round) whenNotPaused {
+    ) public virtual override(ERC721Round) whenNotFinished whenNotPaused {
         super.safeTransferFrom(from, to, tokenId);
     }
 
@@ -284,7 +292,7 @@ contract Schneeballschlacht is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public virtual override(ERC721Round) whenNotPaused {
+    ) public virtual override(ERC721Round) whenNotFinished whenNotPaused {
         super.safeTransferFrom(from, to, tokenId, data);
     }
 
@@ -478,10 +486,14 @@ contract Schneeballschlacht is
      * Winner is minted a reward NFT
      */
     function _finish() internal {
-        _pause();
-        _finished = true;
+        _end();
         _setWinner(msg.sender);
         _hof.mint(msg.sender);
+    }
+
+    function _end() internal {
+        _pause();
+        _finished = true;
     }
 
     function _baseURI() internal pure override returns (string memory) {
