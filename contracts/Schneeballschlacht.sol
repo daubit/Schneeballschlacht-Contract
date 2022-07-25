@@ -60,6 +60,7 @@ contract Schneeballschlacht is
         if (block.number >= getEndHeight()) {
             _end();
         }
+        require(!_finished, "Finished");
         _;
     }
 
