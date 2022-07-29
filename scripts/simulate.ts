@@ -28,6 +28,8 @@ import {
 let history: Action[] = [];
 
 const sim = new Simulation();
+const MINTER_ROLE =
+  "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6";
 
 async function newRound(id: number, round: number, schneeball: Contract) {
   const path = makePath(id, ROUNDS_FOLDER, round);
@@ -148,10 +150,15 @@ async function payout(id: number, contract: Contract, round: number) {
   );
 }
 
-async function simulate(id: number, n: number) {
+async function simulate(id: number, n: number, maxLevel: number) {
+  const HOF = await ethers.getContractFactory("HallOfFame");
+  const hof = await HOF.deploy();
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+  const schneeball = await Schneeball.deploy(hof.address, maxLevel);
   console.log("Contract deployed!");
+  const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
+  await grantRoleTx.wait();
+  console.log("Schneeballschlacht has been granted MINTER_ROLE");
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
     await newRound(id, round, schneeball);
@@ -178,8 +185,9 @@ async function main() {
   for (const wallet of wallets) {
     sim.addresses.push(await wallet.getAddress());
   }
+  const max = 5;
   const id = Date.now() + randomInt(1000);
-  simulate(id, 1);
+  simulate(id, 1, max);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
