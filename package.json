@@ -2,10 +2,12 @@
   "name": "schneeballschlacht",
   "scripts": {
     "ganache": "node ./node_modules/ganache/dist/node/cli.js --networkId 1337 --port 7545",
+    "node": "npx hardhat node",
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage",
-    "simulate": "npx hardhat run scripts/simulate.ts",
+    "simulate:text": "npx hardhat run scripts/simulate.ts",
+    "simulate:dev": "npx hardhat run scripts/simulate.ts --network localhost",
     "integration": "npx hardhat run scripts/integration.ts",
     "test": "npx hardhat test"
   },
