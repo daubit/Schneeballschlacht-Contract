@@ -1,3 +1,4 @@
+/* eslint-disable prettier/prettier */
 /* eslint-disable node/no-missing-import */
 /* eslint-disable no-unused-expressions */
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -35,7 +36,7 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
       await schneeball.deployed();
     });
     it("Name is correct", async () => {
@@ -86,7 +87,7 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
       await schneeball.deployed();
     });
     it("can start successfully", async () => {
@@ -188,7 +189,7 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
       await schneeball.deployed();
     });
     it("erc721 round methods revert before first round", async () => {
@@ -402,7 +403,7 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero);
+      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
       await schneeball.deployed();
     });
     it("erc721 fails before first round", async () => {
@@ -462,11 +463,11 @@ describe("Schneeballschlacht", async () => {
     it("can safeTransfer", async () => {
       const transferTx = await schneeball
         .connect(users[1])
-        ["safeTransferFrom(address,address,uint256)"](
-          users[1].address,
-          users[0].address,
-          1
-        );
+      ["safeTransferFrom(address,address,uint256)"](
+        users[1].address,
+        users[0].address,
+        1
+      );
       await transferTx.wait();
       let balance = await schneeball["balanceOf(address)"](users[1].address);
       expect(Number(balance)).to.equal(0);
@@ -476,11 +477,11 @@ describe("Schneeballschlacht", async () => {
       await expect(
         schneeball
           .connect(users[1])
-          ["safeTransferFrom(address,address,uint256)"](
-            users[0].address,
-            users[2].address,
-            1
-          )
+        ["safeTransferFrom(address,address,uint256)"](
+          users[0].address,
+          users[2].address,
+          1
+        )
       ).to.revertedWith("Error: Unauthorized!");
     });
     it("can safeTransfer to contract", async () => {
@@ -501,20 +502,20 @@ describe("Schneeballschlacht", async () => {
       await expect(
         schneeball
           .connect(users[0])
-          ["safeTransferFrom(address,address,uint256)"](
-            users[0].address,
-            noReceiverTest.address,
-            1
-          )
+        ["safeTransferFrom(address,address,uint256)"](
+          users[0].address,
+          noReceiverTest.address,
+          1
+        )
       ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
       await expect(
         schneeball
           .connect(users[0])
-          ["safeTransferFrom(address,address,uint256)"](
-            users[0].address,
-            wiReceiverTest.address,
-            1
-          )
+        ["safeTransferFrom(address,address,uint256)"](
+          users[0].address,
+          wiReceiverTest.address,
+          1
+        )
       ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
     });
     it("can approve", async () => {
