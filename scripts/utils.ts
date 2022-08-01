@@ -22,6 +22,9 @@ export const GAS_CSV = "gas.csv";
 export const META_CSV = "meta.csv";
 export const ROUND_CSV = "rounds.csv";
 
+export const sleep = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
 export function makePath(id: any, category?: any, round?: any, file?: any) {
   if (!(round || file)) {
     return `${DATA_FOLDER}/${id}/${category}`;

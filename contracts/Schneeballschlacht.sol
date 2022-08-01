@@ -16,13 +16,13 @@ contract Schneeballschlacht is
     Pausable
 {
     using Strings for uint8;
-    uint8 private immutable MAX_LEVEL;
     // ~3 min at 1 Block / 2 secs, block times vary slightly from 2 secs
-    uint16 private constant TIMEOUT_BLOCK_LENGTH = 43200; // 24h
-    uint8 private constant COOLDOWN_BLOCK_LENGTH = 90; // 3 mins
+    uint16 private constant TIMEOUT_BLOCK_LENGTH = 60; // 43200; // 24h => 43200
+    uint8 private constant COOLDOWN_BLOCK_LENGTH = 15; // 90; // 3 mins => 90
+    uint8 private immutable MAX_LEVEL;
+    bool private _finished;
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
-    bool private _finished;
 
     HallOfFame private _hof;
 

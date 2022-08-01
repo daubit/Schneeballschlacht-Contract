@@ -16,6 +16,7 @@ import {
   getLevel,
   getToken,
   hasTokens,
+  sleep,
   HISTORY_FILE,
   makePath,
   MINT_FEE,
@@ -171,6 +172,11 @@ async function simulate(id: number, n: number, maxLevel: number) {
           await payout(id, schneeball, round);
           await save(id, schneeball, round);
           break;
+        } else if (e.toString().includes("Cooldown")) {
+          const from = e.transaction.from;
+          console.log(`Game ${id}:\t${from} is on cooldown!`);
+          await sleep(1000);
+          continue;
         } else if (e.toString().includes("revert")) {
           console.log(e);
           break;
