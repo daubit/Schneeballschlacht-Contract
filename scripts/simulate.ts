@@ -167,7 +167,10 @@ async function simulate(id: number, n: number, maxLevel: number) {
       try {
         await simulateRound(id, schneeball);
       } catch (e: any) {
-        if (e.toString().includes("Pausable: paused")) {
+        if (
+          e.toString().includes("Pausable: paused") ||
+          e.toString().includes("Finished")
+        ) {
           console.log(`Game ${id} has finished`);
           await payout(id, schneeball, round);
           await save(id, schneeball, round);
