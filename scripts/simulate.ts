@@ -99,6 +99,7 @@ async function saveRound(id: number, schneeball: Contract, round: number) {
   roundData.tosses = Number(tosses);
   roundData.totalSupply = Number(totalSupply);
   roundData.payoutPerToss = Number(payoutPerToss);
+  roundData.contractAddress = schneeball.address;
   writeFileSync(
     makePath(id, ROUNDS_FOLDER, round, ROUND_FILE),
     JSON.stringify(roundData, null, 2)
