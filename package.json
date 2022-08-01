@@ -6,7 +6,7 @@
     "clean": "npx hardhat clean",
     "compile": "npx hardhat compile",
     "coverage": "npx hardhat coverage",
-    "simulate:text": "npx hardhat run scripts/simulate.ts",
+    "simulate:test": "npx hardhat run scripts/simulate.ts",
     "simulate:dev": "npx hardhat run scripts/simulate.ts --network localhost",
     "integration": "npx hardhat run scripts/integration.ts",
     "test": "npx hardhat test"
