@@ -6,14 +6,9 @@ import { expect } from "chai";
 import { BigNumber, constants, Contract } from "ethers";
 import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
+import { SnowballStruct } from "../typechain-types/contracts/Schneeballschlacht"
 
 const ethers = hardhat.ethers;
-
-type SnowballStructOutput = [number, BigNumber[], BigNumber] & {
-  level: number;
-  partners: BigNumber[];
-  parentSnowballId: BigNumber;
-};
 
 type QueryStructOutput = [string, number, BigNumber] & {
   player: string;
@@ -116,7 +111,7 @@ describe("Schneeballschlacht", async () => {
     });
     it("getSnowballsOfAddress", async () => {
       const userAddress = users[0].address;
-      let snowballs: SnowballStructOutput[] = await schneeball[
+      let snowballs: SnowballStruct[] = await schneeball[
         "getSnowballsOfAddress(address)"
       ](userAddress);
       expect(snowballs.length).to.equal(2);
@@ -395,6 +390,10 @@ describe("Schneeballschlacht", async () => {
         partnerIdsAndRoundsId.map((ids: BigNumber) => Number(ids))
       ).to.have.same.members([4, 3]);
     });
+    it("Contract returns snowball info", async () => {
+      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](1);
+      expect(snowball.partners.length).to.be.eq(2)
+    })
   });
   describe("ERC721", () => {
     before(async () => {
@@ -739,11 +738,15 @@ describe("Schneeballschlacht", async () => {
       await expect(tossTx).to.revertedWith("Cooldown");
     });
     it("cannot toss on timeout", async () => {
-      const partnerAddress = users[3].address;
-      const tossTx = schneeball.connect(users[1]).toss(partnerAddress, 1, {
+      const partner3Address = users[3].address;
+      const tossTx = schneeball.connect(users[2]).toss(partner3Address, 4, {
         value: TOSS_FEE(1),
       });
       await expect(tossTx).to.revertedWith("Timeout");
     });
+    it("snowball has stone", async () => {
+      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](1);
+      expect(snowball.hasStone).to.be.eq(true);
+    })
   });
 });

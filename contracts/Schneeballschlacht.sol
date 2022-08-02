@@ -116,6 +116,27 @@ contract Schneeballschlacht is
     }
 
     /**
+     * @dev Returns snowball from id in the current round.
+     * @param tokenId, utint256
+     */
+    function getSnowball(uint256 tokenId)
+        external
+        view
+        returns (Snowball memory)
+    {
+        uint256 roundId = getRoundId();
+        return _snowballs[roundId][tokenId];
+    }
+
+    function getSnowball(uint256 roundId, uint256 tokenId)
+        external
+        view
+        returns (Snowball memory)
+    {
+        return _snowballs[roundId][tokenId];
+    }
+
+    /**
      * @dev External function to return list of partner tokenIds
      *
      * @param tokenId uint256 ID of the token to be transferred
@@ -273,7 +294,7 @@ contract Schneeballschlacht is
         isTransferable(tokenId, to)
         senderNotTimeoutedOrOnCooldown
     {
-        require(ownerOf(tokenId) == msg.sender, "Error: Invalid address");
+        require(ownerOf(tokenId) == msg.sender, "Error: Not owner");
         require(to != msg.sender, "Error: Self Toss");
         require(to != address(0), "Error: zero address");
         uint256 roundId = getRoundId();
@@ -290,6 +311,7 @@ contract Schneeballschlacht is
 
         if (hasStone(level)) {
             _timeoutStart[to] = block.number;
+            _snowballs[roundId][tokenId].hasStone = true;
             emit Timeout(msg.sender, tokenId, to);
         }
 
@@ -395,6 +417,7 @@ contract Schneeballschlacht is
         uint256 tokenId = _newTokenId();
         _safeMint(to, tokenId);
         _snowballs[roundId][tokenId] = Snowball({
+            hasStone: false,
             level: level,
             partners: new uint256[](0),
             parentSnowballId: parentSnowballId
@@ -503,6 +526,7 @@ contract Schneeballschlacht is
         uint256 tokenId = _newTokenId();
         _safeMint(to, tokenId);
         _snowballs[roundId][tokenId] = Snowball({
+            hasStone: false,
             level: 1,
             partners: new uint256[](0),
             parentSnowballId: 0

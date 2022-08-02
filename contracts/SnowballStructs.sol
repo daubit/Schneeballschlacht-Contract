@@ -13,6 +13,7 @@ struct Round {
 }
 
 struct Snowball {
+    bool hasStone;
     uint8 level;
     uint256[] partners;
     uint256 parentSnowballId;
