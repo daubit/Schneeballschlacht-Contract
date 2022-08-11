@@ -20,7 +20,7 @@ const polygonNodeUrl = `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_KEY_M
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.15",
+    version: "0.8.16",
     settings: {
       optimizer: {
         enabled: true,

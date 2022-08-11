@@ -22,5 +22,7 @@ struct Snowball {
 struct Query {
     address player;
     uint8 level;
+    uint8 partnerCount;
+    bool hasStone;
     uint256 tokenId;
 }

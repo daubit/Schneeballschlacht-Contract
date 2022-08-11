@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-NC-4.0
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "../Schneeballschlacht.sol";
 
