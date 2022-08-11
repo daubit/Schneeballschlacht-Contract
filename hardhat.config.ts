@@ -6,6 +6,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "hardhat-ethernal";
 
 dotenv.config();
 
@@ -43,5 +44,14 @@ const config: HardhatUserConfig = {
       polygonMumbai: process.env.POLYSCAN_KEY!,
     },
   },
+  // @ts-ignore
+  ethernal: {
+    email: process.env.ETHERNAL_EMAIL,
+    password: process.env.ETHERNAL_PASSWORD,
+    uploadAst: true,
+    resetOnStart: "localhost",
+    workspace: "localhost",
+  },
+  ethernalAstUpload: true,
 };
 export default config;
