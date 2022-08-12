@@ -24,7 +24,7 @@ contract Schneeballschlacht is
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
 
-    HallOfFame private _hof;
+    HallOfFame private immutable _hof;
 
     // Mapping roundId to tokenId to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
@@ -44,8 +44,6 @@ contract Schneeballschlacht is
 
     // map holder address to cooldown start blocknumber, defaults to 0
     mapping(address => uint256) private _cooldownStart;
-
-    event Mint(address indexed to);
 
     event Toss(
         address indexed from,
@@ -253,7 +251,7 @@ contract Schneeballschlacht is
      * @dev Function to initialize a new round. Reverts when a round is already running.
      * The address calling the function is granted a free snowball.
      */
-    function startRound() public override(ISchneeballschlacht) whenPaused {
+    function startRound() external override(ISchneeballschlacht) whenPaused {
         _unpause();
         _startRound();
         _mint(msg.sender, 1, 0);
@@ -263,7 +261,7 @@ contract Schneeballschlacht is
      * @dev Function to end a round. Reverts when a round is not finished.
      * endRound
      */
-    function endRound() public override(ISchneeballschlacht) whenFinished {
+    function endRound() external override(ISchneeballschlacht) whenFinished {
         _finished = false;
         uint256 totalPayout;
         uint256 bonusLevels;
@@ -368,7 +366,7 @@ contract Schneeballschlacht is
     /**
      * @dev Returns the amount of tosses made in the current round
      */
-    function totalTosses() public view returns (uint256) {
+    function totalTosses() external view returns (uint256) {
         uint256 roundId = getRoundId();
         return _tosses[roundId];
     }
@@ -378,7 +376,7 @@ contract Schneeballschlacht is
      *
      * @param roundId uint256
      */
-    function totalTosses(uint256 roundId) public view returns (uint256) {
+    function totalTosses(uint256 roundId) external view returns (uint256) {
         return _tosses[roundId];
     }
 
@@ -469,7 +467,7 @@ contract Schneeballschlacht is
      * @param tokenId uint256
      */
     function tokenURI(uint256 tokenId)
-        public
+        external
         view
         virtual
         override
@@ -556,9 +554,9 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
-function max(uint256 a, uint256 b) internal pure returns (uint256) {
-    return a >= b ? a : b;
-}
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? a : b;
+    }
 
     /**
      * @dev Internal function for handling the payout to each address owning a snowball

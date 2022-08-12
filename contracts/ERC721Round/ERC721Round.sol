@@ -171,7 +171,7 @@ abstract contract ERC721Round is
      * @dev See {IERC721Metadata-tokenURI}.
      */
     function tokenURI(uint256 tokenId)
-        public
+        external
         view
         virtual
         returns (string memory);
