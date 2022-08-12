@@ -152,6 +152,16 @@ async function payout(id: number, contract: Contract, round: number) {
   );
 }
 
+async function withdrawAll(id: number, contract: Contract, round: number) {
+  for (const address of sim.addresses) {
+    const signer = await ethers.getSigner(address);
+    const withdraw = await contract
+      .connect(signer)
+      ["withdraw(uint256,address)"](round, address);
+    await withdraw.wait();
+  }
+}
+
 async function simulate(id: number, n: number, maxLevel: number) {
   const HOF = await ethers.getContractFactory("HallOfFame");
   const hof = await HOF.deploy();
@@ -181,11 +191,13 @@ async function simulate(id: number, n: number, maxLevel: number) {
           e.toString().includes("Finished")
         ) {
           console.log(`Game ${id} has finished`);
+
+          await payout(id, schneeball, round);
+          await withdrawAll(id, schneeball, round);
           await ethernal.push({
             name: "Escrow",
             address: await schneeball.getEscrow(round),
           });
-          await payout(id, schneeball, round);
           await save(id, schneeball, round);
           break;
         } else if (e.toString().includes("Cooldown")) {
@@ -214,7 +226,7 @@ async function main() {
   }
   const max = 3;
   const id = Date.now() + randomInt(1000);
-  await simulate(id, 2, max);
+  await simulate(id, 1, max);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

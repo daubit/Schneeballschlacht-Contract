@@ -556,6 +556,10 @@ contract Schneeballschlacht is
         return uint256(hashValue) % length;
     }
 
+function max(uint256 a, uint256 b) internal pure returns (uint256) {
+    return a >= b ? a : b;
+}
+
     /**
      * @dev Internal function for handling the payout to each address owning a snowball
      * Payout is based on the tosses made by a snowball
@@ -573,7 +577,7 @@ contract Schneeballschlacht is
         _addEscrow(round, escrow);
         uint256 total = _tosses[round];
         // 1% of total is bonus for the winner
-        uint256 bonusForWinner = total / 100;
+        uint256 bonusForWinner = max(total / 100, 1);
         total += bonusForWinner;
         // max total wei are leftover each round for the next round
         uint256 payoutPerToss = address(this).balance / total;

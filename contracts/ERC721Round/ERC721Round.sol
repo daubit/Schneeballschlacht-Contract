@@ -717,6 +717,7 @@ abstract contract ERC721Round is
         _rounds[roundId].totalSupply = total;
         _rounds[roundId].winnerBonus = winnerBonus;
         _rounds[roundId].payoutPerToss = payoutPerToss;
+        _rounds[roundId].endHeight = block.number;
     }
 
     function getTokensOfAddress(uint256 round, address addr)
