@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: CC-BY-NC-4.0
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.16;
 
 import "./ERC721Round/ERC721Round.sol";
 import "./EscrowManager.sol";
@@ -215,11 +215,16 @@ contract Schneeballschlacht is
         Query[] memory result = new Query[](to - from + 1);
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {
             uint8 level = _snowballs[roundId][tokenId].level;
+            // length is uint256 but we can cast to uint8 because max(length) === MAX_LEVEL
+            uint8 partnerCount = uint8(_snowballs[roundId][tokenId].partners.length);
+            bool snowballHasStone = _snowballs[roundId][tokenId].hasStone;
             address player = ownerOf(tokenId);
             Query memory query = Query({
                 player: player,
                 tokenId: tokenId,
-                level: level
+                level: level,
+                partnerCount: partnerCount,
+                hasStone: snowballHasStone
             });
             result[i++] = query;
         }

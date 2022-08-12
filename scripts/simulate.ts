@@ -8,7 +8,7 @@
 import { randomInt } from "crypto";
 import { Contract } from "ethers";
 import { existsSync, mkdirSync, writeFileSync } from "fs";
-import { ethers } from "hardhat";
+import { ethers, ethernal } from "hardhat";
 import { Simulation } from "./simulation";
 import { Action, ActionType } from "./types";
 import {
@@ -155,8 +155,16 @@ async function payout(id: number, contract: Contract, round: number) {
 async function simulate(id: number, n: number, maxLevel: number) {
   const HOF = await ethers.getContractFactory("HallOfFame");
   const hof = await HOF.deploy();
+  await ethernal.push({
+    name: "HallOfFame",
+    address: hof.address,
+  });
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy(hof.address, maxLevel);
+  await ethernal.push({
+    name: "Schneeballschlacht",
+    address: schneeball.address,
+  });
   console.log("Contract deployed!");
   const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
   await grantRoleTx.wait();
@@ -173,6 +181,10 @@ async function simulate(id: number, n: number, maxLevel: number) {
           e.toString().includes("Finished")
         ) {
           console.log(`Game ${id} has finished`);
+          await ethernal.push({
+            name: "Escrow",
+            address: await schneeball.getEscrow(1),
+          });
           await payout(id, schneeball, round);
           await save(id, schneeball, round);
           break;
@@ -195,9 +207,9 @@ async function main() {
   for (const wallet of wallets) {
     sim.addresses.push(await wallet.getAddress());
   }
-  const max = 5;
+  const max = 3;
   const id = Date.now() + randomInt(1000);
-  simulate(id, 1, max);
+  await simulate(id, 1, max);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
