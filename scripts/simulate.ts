@@ -183,7 +183,7 @@ async function simulate(id: number, n: number, maxLevel: number) {
           console.log(`Game ${id} has finished`);
           await ethernal.push({
             name: "Escrow",
-            address: await schneeball.getEscrow(1),
+            address: await schneeball.getEscrow(round),
           });
           await payout(id, schneeball, round);
           await save(id, schneeball, round);
@@ -191,6 +191,11 @@ async function simulate(id: number, n: number, maxLevel: number) {
         } else if (e.toString().includes("Cooldown")) {
           const from = e.transaction.from;
           console.log(`Game ${id}:\t${from} is on cooldown!`);
+          await sleep(1000);
+          continue;
+        } else if (e.toString().includes("Timeout")) {
+          const from = e.transaction.from;
+          console.log(`Game ${id}:\t${from} is on timeout!`);
           await sleep(1000);
           continue;
         } else if (e.toString().includes("revert")) {
@@ -209,7 +214,7 @@ async function main() {
   }
   const max = 3;
   const id = Date.now() + randomInt(1000);
-  await simulate(id, 1, max);
+  await simulate(id, 2, max);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
