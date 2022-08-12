@@ -4,7 +4,7 @@ import ProgressBar from "progress";
 
 async function main() {
   const signers = await ethers.getSigners();
-  const Sbs = await ethers.getContractFactory("Schneeballschlacht");
+  const Sbs = await ethers.getContractFactory("SchneeballSchlachtMaxLevel3");
   const sbs = await Sbs.deploy(ethers.constants.AddressZero);
   await sbs.deployed();
   const startTx = await sbs.startRound();
@@ -19,7 +19,7 @@ async function main() {
     bar.tick();
     const mintTx = await sbs
       .connect(signers[0])
-      ["mint(address,uint256)"](signers[0].address, total);
+    ["mint(address,uint256)"](signers[0].address, total);
     await mintTx.wait();
   }
   console.log("Querying...");
