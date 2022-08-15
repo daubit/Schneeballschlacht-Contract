@@ -520,23 +520,6 @@ contract Schneeballschlacht is
     }
 
     /**
-     * @dev Internal function for handling mint
-     *
-     * @param to address
-     */
-    function _mint(address to) internal {
-        uint256 roundId = getRoundId();
-        uint256 tokenId = _newTokenId();
-        _safeMint(to, tokenId);
-        _snowballs[roundId][tokenId] = Snowball({
-            hasStone: false,
-            level: 1,
-            partners: new uint256[](0),
-            parentSnowballId: 0
-        });
-    }
-
-    /**
      * @dev Pseudo-random generator.
      *
      * @param length uint256

@@ -650,7 +650,6 @@ abstract contract ERC721Round is
         return _rounds[roundId].startHeight;
     }
 
-    // TODO: this seem like it would always be 0x0 except for the time between rounds
     function getEndHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
         require(roundId > 0, "No Round started yet!");
