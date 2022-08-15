@@ -26,6 +26,8 @@ contract Schneeballschlacht is
 
     HallOfFame private immutable _hof;
 
+    string private _baseURI;
+
     // Mapping roundId to tokenId to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
 
@@ -58,12 +60,13 @@ contract Schneeballschlacht is
         address indexed to
     );
 
-    constructor(address hof, uint8 maxLevel)
+    constructor(address hof, uint8 maxLevel, string memory baseURI)
         ERC721Round("Schneeballschlacht", "Schneeball")
     {
         _pause();
         _hof = HallOfFame(hof);
         _finished = false;
+        _baseURI = baseURI;
         MAX_LEVEL = maxLevel;
     }
 
@@ -477,7 +480,7 @@ contract Schneeballschlacht is
         return
             string(
                 abi.encodePacked(
-                    _baseURI(),
+                    _baseURI,
                     _snowballs[roundId][tokenId].level.toString()
                 )
             );
@@ -513,7 +516,7 @@ contract Schneeballschlacht is
         return
             string(
                 abi.encodePacked(
-                    _baseURI(),
+                    _baseURI,
                     _snowballs[roundId][tokenId].level.toString()
                 )
             );
@@ -566,10 +569,6 @@ contract Schneeballschlacht is
         uint256 totalPayout = total * payoutPerToss;
         escrow.deposit{value: totalPayout}();
         return (totalPayout, bonusForWinner, payoutPerToss);
-    }
-
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://";
     }
 
     function isTimedOut(address addr) external view returns (bool) {

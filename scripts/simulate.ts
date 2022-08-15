@@ -164,13 +164,13 @@ async function withdrawAll(id: number, contract: Contract, round: number) {
 
 async function simulate(id: number, n: number, maxLevel: number) {
   const HOF = await ethers.getContractFactory("HallOfFame");
-  const hof = await HOF.deploy();
+  const hof = await HOF.deploy("ipfs://", "ipfs://");
   await ethernal.push({
     name: "HallOfFame",
     address: hof.address,
   });
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy(hof.address, maxLevel);
+  const schneeball = await Schneeball.deploy(hof.address, maxLevel, "ipfs://");
   await ethernal.push({
     name: "Schneeballschlacht",
     address: schneeball.address,

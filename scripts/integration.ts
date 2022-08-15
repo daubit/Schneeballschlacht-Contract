@@ -24,10 +24,10 @@ async function deploy() {
     sim.addresses.push(await wallet.getAddress());
   }
   const Hof = await ethers.getContractFactory("HallOfFame");
-  const hof = await Hof.deploy();
+  const hof = await Hof.deploy("ipfs://", "ipfs://");
   console.log("HallOfFame deployed!");
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy(hof.address);
+  const schneeball = await Schneeball.deploy(hof.address, 3, "ipfs://");
   console.log("Schneeballschlacht deployed!");
   const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
   await grantRoleTx.wait();

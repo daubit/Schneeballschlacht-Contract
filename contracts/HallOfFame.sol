@@ -5,21 +5,24 @@ pragma solidity 0.8.16;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
-// TODO: tokenURI links
 contract HallOfFame is ERC721, AccessControl {
+
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     uint256 private _totalSupply;
 
     string private _contractURI;
+    string private _baseURIS;
 
-    constructor() ERC721("HallOfFame", "Trophy") {
+    constructor(string memory contractURIc, string memory baseURIc) ERC721("HallOfFame", "Trophy") {
         _grantRole(MINTER_ROLE, msg.sender);
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _contractURI = contractURIc;
+        _baseURIS = baseURIc;
     }
 
-    function _baseURI() internal pure override returns (string memory) {
-        return "ipfs://";
+    function _baseURI() internal view override returns (string memory) {
+        return _baseURIS;
     }
 
     function contractURI() external view returns (string memory) {
@@ -40,5 +43,12 @@ contract HallOfFame is ERC721, AccessControl {
     function mint(address to) external onlyRole(MINTER_ROLE) {
         _totalSupply++;
         _safeMint(to, _totalSupply);
+    }
+
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+
+        string memory baseURI = _baseURI();
+        return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI)) : "";
     }
 }

@@ -15,12 +15,12 @@ describe("Schneeballschlacht - HOF", async () => {
 
       // Deploy Schneeballschlacht
       const HOF = await ethers.getContractFactory("HallOfFame");
-      hof = await HOF.connect(users[0]).deploy();
+      hof = await HOF.connect(users[0]).deploy("ipfs://", "ipfs://1");
       await hof.deployed();
     });
     it("can start successfully", async () => {
       const contractURI = await hof.contractURI();
-      expect(contractURI).to.be.equals("");
+      expect(contractURI).to.be.equals("ipfs://");
       await expect(hof.connect(users[1]).mint(users[0].address)).to.reverted;
       const mintTx = await hof.connect(users[0]).mint(users[2].address);
       await mintTx.wait();

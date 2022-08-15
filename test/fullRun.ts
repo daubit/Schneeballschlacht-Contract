@@ -22,7 +22,7 @@ describe("Schneeballschlacht - Full Run with Maxlevel 3", async () => {
 
       // Deploy Schneeballschlacht
       const HOF = await ethers.getContractFactory("HallOfFame");
-      hof = await HOF.connect(users[0]).deploy();
+      hof = await HOF.connect(users[0]).deploy("ipfs://", "ipfs://");
       await hof.deployed();
 
       const SchneeballSchlacht = await ethers.getContractFactory(

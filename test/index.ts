@@ -6,7 +6,7 @@ import { expect } from "chai";
 import { BigNumber, constants, Contract } from "ethers";
 import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
-import { SnowballStruct } from "../typechain-types/contracts/Schneeballschlacht"
+import { SnowballStruct } from "../typechain-types/contracts/Schneeballschlacht";
 
 const ethers = hardhat.ethers;
 
@@ -31,7 +31,11 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
+      schneeball = await Schneeball.deploy(
+        ethers.constants.AddressZero,
+        5,
+        "ipfs://"
+      );
       await schneeball.deployed();
     });
     it("Name is correct", async () => {
@@ -82,7 +86,11 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
+      schneeball = await Schneeball.deploy(
+        ethers.constants.AddressZero,
+        5,
+        "ipfs://"
+      );
       await schneeball.deployed();
     });
     it("can start successfully", async () => {
@@ -184,7 +192,11 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
+      schneeball = await Schneeball.deploy(
+        ethers.constants.AddressZero,
+        5,
+        "ipfs://"
+      );
       await schneeball.deployed();
     });
     it("erc721 round methods revert before first round", async () => {
@@ -391,9 +403,11 @@ describe("Schneeballschlacht", async () => {
       ).to.have.same.members([4, 3]);
     });
     it("Contract returns snowball info", async () => {
-      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](1);
-      expect(snowball.partners.length).to.be.eq(2)
-    })
+      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](
+        1
+      );
+      expect(snowball.partners.length).to.be.eq(2);
+    });
   });
   describe("ERC721", () => {
     before(async () => {
@@ -402,7 +416,11 @@ describe("Schneeballschlacht", async () => {
 
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-      schneeball = await Schneeball.deploy(ethers.constants.AddressZero, 5);
+      schneeball = await Schneeball.deploy(
+        ethers.constants.AddressZero,
+        5,
+        "ipfs://"
+      );
       await schneeball.deployed();
     });
     it("erc721 fails before first round", async () => {
@@ -462,11 +480,11 @@ describe("Schneeballschlacht", async () => {
     it("can safeTransfer", async () => {
       const transferTx = await schneeball
         .connect(users[1])
-      ["safeTransferFrom(address,address,uint256)"](
-        users[1].address,
-        users[0].address,
-        1
-      );
+        ["safeTransferFrom(address,address,uint256)"](
+          users[1].address,
+          users[0].address,
+          1
+        );
       await transferTx.wait();
       let balance = await schneeball["balanceOf(address)"](users[1].address);
       expect(Number(balance)).to.equal(0);
@@ -476,11 +494,11 @@ describe("Schneeballschlacht", async () => {
       await expect(
         schneeball
           .connect(users[1])
-        ["safeTransferFrom(address,address,uint256)"](
-          users[0].address,
-          users[2].address,
-          1
-        )
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            users[2].address,
+            1
+          )
       ).to.revertedWith("Error: Unauthorized!");
     });
     it("can safeTransfer to contract", async () => {
@@ -501,20 +519,20 @@ describe("Schneeballschlacht", async () => {
       await expect(
         schneeball
           .connect(users[0])
-        ["safeTransferFrom(address,address,uint256)"](
-          users[0].address,
-          noReceiverTest.address,
-          1
-        )
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            noReceiverTest.address,
+            1
+          )
       ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
       await expect(
         schneeball
           .connect(users[0])
-        ["safeTransferFrom(address,address,uint256)"](
-          users[0].address,
-          wiReceiverTest.address,
-          1
-        )
+          ["safeTransferFrom(address,address,uint256)"](
+            users[0].address,
+            wiReceiverTest.address,
+            1
+          )
       ).to.revertedWith("ERC721: transfer to non ERC721Receiver implementer");
     });
     it("can approve", async () => {
@@ -745,8 +763,10 @@ describe("Schneeballschlacht", async () => {
       await expect(tossTx).to.revertedWith("Timeout");
     });
     it("snowball has stone", async () => {
-      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](1);
+      const snowball: SnowballStruct = await schneeball["getSnowball(uint256)"](
+        1
+      );
       expect(snowball.hasStone).to.be.eq(true);
-    })
+    });
   });
 });
