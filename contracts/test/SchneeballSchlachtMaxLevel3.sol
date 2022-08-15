@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "../Schneeballschlacht.sol";
 
 contract SchneeballSchlachtMaxLevel3 is Schneeballschlacht {
-    constructor(address hof) Schneeballschlacht(hof, 3, "ipfs://") {}
+    constructor(address hof) Schneeballschlacht(hof, 3, "ipfs://", 15, 60) {}
 
     /**
      * @dev Function to mint a snowball

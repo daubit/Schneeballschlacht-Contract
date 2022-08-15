@@ -27,7 +27,7 @@ async function deploy() {
   const hof = await Hof.deploy("ipfs://", "ipfs://");
   console.log("HallOfFame deployed!");
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy(hof.address, 3, "ipfs://");
+  const schneeball = await Schneeball.deploy(hof.address, 3, "ipfs://", 15, 60);
   console.log("Schneeballschlacht deployed!");
   const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
   await grantRoleTx.wait();

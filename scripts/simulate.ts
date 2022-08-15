@@ -170,7 +170,13 @@ async function simulate(id: number, n: number, maxLevel: number) {
     address: hof.address,
   });
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
-  const schneeball = await Schneeball.deploy(hof.address, maxLevel, "ipfs://");
+  const schneeball = await Schneeball.deploy(
+    hof.address,
+    maxLevel,
+    "ipfs://",
+    15,
+    60
+  );
   await ethernal.push({
     name: "Schneeballschlacht",
     address: schneeball.address,

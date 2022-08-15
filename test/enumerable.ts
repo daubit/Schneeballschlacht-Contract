@@ -21,7 +21,9 @@ describe("Schneeballschlacht - Enumerable", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://"
+        "ipfs://",
+        15,
+        60
       );
       await schneeball.deployed();
     });
@@ -89,7 +91,9 @@ describe("Schneeballschlacht - Enumerable", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://"
+        "ipfs://",
+        15,
+        60
       );
       await schneeball.deployed();
     });
@@ -167,7 +171,9 @@ describe("Schneeballschlacht - Enumerable", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://"
+        "ipfs://",
+        15,
+        60
       );
       await schneeball.deployed();
     });
