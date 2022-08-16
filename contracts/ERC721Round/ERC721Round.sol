@@ -702,9 +702,6 @@ abstract contract ERC721Round is
         uint256 total = getTokenId();
         uint256 roundId = getRoundId();
 
-        for (uint256 tokenId = 1; tokenId <= total; tokenId++) {
-            emit Transfer(ownerOf(tokenId), address(0), tokenId);
-        }
         _rounds[roundId].totalPayout = totalPayout;
         _rounds[roundId].totalSupply = total;
         _rounds[roundId].winnerBonus = winnerBonus;
