@@ -497,11 +497,11 @@ contract Schneeballschlacht is
         return _contractURI;
     }
 
-    function setFolderCID(string memory __folderCID)
+    function setBaseURI(string memory __baseURI)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        _folderCID = __folderCID;
+        _baseURI = __baseURI;
     }
 
     function setContractCID(string memory __contractURI)
