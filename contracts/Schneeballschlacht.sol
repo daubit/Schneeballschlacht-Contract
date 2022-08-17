@@ -483,6 +483,7 @@ contract Schneeballschlacht is
             string(
                 abi.encodePacked(
                     _baseURI,
+                    "/",
                     _snowballs[roundId][tokenId].level.toString()
                 )
             );
@@ -519,6 +520,7 @@ contract Schneeballschlacht is
             string(
                 abi.encodePacked(
                     _baseURI,
+                    "/",
                     _snowballs[roundId][tokenId].level.toString()
                 )
             );

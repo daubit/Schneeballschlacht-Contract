@@ -15,7 +15,10 @@ async function main() {
   // We get the contract to deploy
   if (!hofAddress) {
     const HOF = await ethers.getContractFactory("HallOfFame");
-    const hof = await HOF.deploy();
+    const hof = await HOF.deploy(
+      "QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
+      "QmTRZbTVWJHtJ8JMYyh8jhKy8hH2CGgVDWTfobcnVdq8Cs"
+    );
     await hof.deployed();
     addresses.hof = hof.address;
     hofAddress = hof.address;
@@ -23,7 +26,13 @@ async function main() {
   }
   if (!sbsAddress) {
     const Sbs = await ethers.getContractFactory("Schneeballschlacht");
-    const sbs = await Sbs.deploy(hofAddress);
+    const sbs = await Sbs.deploy(
+      hofAddress,
+      3,
+      "Qmesf4cbbCMYkVrMrw2gpapiZWtzEjf87rpSVErUfUsw61",
+      15,
+      60
+    );
     await sbs.deployed();
     addresses.sbs = sbs.address;
     console.log("Schneeballschlacht deployed to:", sbs.address);
