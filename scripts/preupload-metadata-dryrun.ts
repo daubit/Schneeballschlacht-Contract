@@ -25,7 +25,7 @@ async function preuploadMetadata() {
   artFiles.forEach((a) => (fakeLookup[a] = a));
 
   const lookuptableEntries = Object.entries(fakeLookup);
-  shuffle(lookuptableEntries);
+  //shuffle(lookuptableEntries);
 
   const metadataArray: { data: Object; filename: string }[] = [];
   for (const artlookup of lookuptableEntries) {

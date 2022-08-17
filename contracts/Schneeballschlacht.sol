@@ -27,6 +27,7 @@ contract Schneeballschlacht is
     HallOfFame private immutable _hof;
 
     string private _baseURI;
+    string private _contractURI;
 
     // Mapping roundId to tokenId to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
@@ -60,13 +61,14 @@ contract Schneeballschlacht is
         address indexed to
     );
 
-    constructor(address hof, uint8 maxLevel, string memory baseURI, uint16 timeoutLength, uint8 coolDownlength)
+    constructor(address hof, uint8 maxLevel, string memory baseURI, string memory __contractURI, uint16 timeoutLength, uint8 coolDownlength)
         ERC721Round("Schneeballschlacht", "Schneeball")
     {
         _pause();
         _hof = HallOfFame(hof);
         _finished = false;
         _baseURI = baseURI;
+        _contractURI = __contractURI;
         MAX_LEVEL = maxLevel;
         TIMEOUT_BLOCK_LENGTH = timeoutLength;
         COOLDOWN_BLOCK_LENGTH = coolDownlength;
@@ -594,5 +596,9 @@ contract Schneeballschlacht is
         // randomIndex returns [0...parameter - 1] because it uses modulo internally
         // so len([0...parameter - 1]) == parameter
         return _randomIndex(1000) < level;
+    }
+
+    function contractURI() external view returns (string memory) {
+        return _contractURI;
     }
 }
