@@ -7,6 +7,7 @@ import { BigNumber, constants, Contract } from "ethers";
 import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
 import { SnowballStruct } from "../typechain-types/contracts/Schneeballschlacht";
+import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
 
 const ethers = hardhat.ethers;
 
@@ -34,9 +35,11 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://",
-        15,
-        60
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
+        60,
+        15
       );
       await schneeball.deployed();
     });
@@ -91,9 +94,11 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://",
-        15,
-        60
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
+        60,
+        15
       );
       await schneeball.deployed();
     });
@@ -199,25 +204,27 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://",
-        15,
-        60
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
+        60,
+        15
       );
       await schneeball.deployed();
     });
     it("erc721 round methods revert before first round", async () => {
       await expect(schneeball["ownerOf(uint256)"](1)).to.revertedWith(
-        "No Round started yet!"
+        "No Round started"
       );
       await expect(
         schneeball["ownerOf(uint256,uint256)"](1, 1)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
       await expect(
         schneeball["balanceOf(address)"](users[0].address)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
       await expect(
         schneeball["balanceOf(uint256,address)"](2, users[0].address)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
     });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
@@ -261,14 +268,14 @@ describe("Schneeballschlacht", async () => {
       expect(ownerOf2).to.equal(users[0].address);
 
       await expect(schneeball["ownerOf(uint256)"](3)).to.revertedWith(
-        "Error: Invalid token"
+        "Invalid token"
       );
       await expect(
         schneeball["ownerOf(uint256,uint256)"](1, 3)
-      ).to.revertedWith("Error: Invalid token");
+      ).to.revertedWith("Invalid token");
       await expect(
         schneeball["ownerOf(uint256,uint256)"](2, 1)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
     });
     it("balanceOf is correct", async () => {
       const balanceOf1 = await schneeball["balanceOf(address)"](
@@ -284,13 +291,13 @@ describe("Schneeballschlacht", async () => {
 
       await expect(
         schneeball["balanceOf(address)"](constants.AddressZero)
-      ).to.revertedWith("Error: zero address");
+      ).to.revertedWith("Zero address");
       await expect(
         schneeball["balanceOf(uint256,address)"](1, constants.AddressZero)
-      ).to.revertedWith("Error: zero address");
+      ).to.revertedWith("Zero address");
       await expect(
         schneeball["balanceOf(uint256,address)"](2, users[0].address)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
     });
     it("cannot mint with insufficient fee", async () => {
       const userAddress = users[0].address;
@@ -385,7 +392,9 @@ describe("Schneeballschlacht", async () => {
     it("Token has correct tokenURI", async () => {
       const tokenURI = await schneeball["tokenURI(uint256)"](1);
       const tokenLevel = await schneeball["getLevel(uint256)"](1);
-      expect(tokenURI).to.be.equal(`ipfs://${tokenLevel}`);
+      expect(tokenURI).to.be.equal(
+        `ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf/${tokenLevel}`
+      );
       const tokenURIRoundId = await schneeball["tokenURI(uint256,uint256)"](
         1,
         1
@@ -394,7 +403,9 @@ describe("Schneeballschlacht", async () => {
         1,
         1
       );
-      expect(tokenURIRoundId).to.be.equal(`ipfs://${tokenLevelRoundId}`);
+      expect(tokenURIRoundId).to.be.equal(
+        `ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf/${tokenLevelRoundId}`
+      );
     });
     it("get correct partner token ids", async () => {
       const partnerIds = await schneeball["getPartnerTokenIds(uint256)"](1);
@@ -425,30 +436,32 @@ describe("Schneeballschlacht", async () => {
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
         5,
-        "ipfs://",
-        15,
-        60
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
+        60,
+        15
       );
       await schneeball.deployed();
     });
     it("erc721 fails before first round", async () => {
       await expect(schneeball["getApproved(uint256)"](1)).to.revertedWith(
-        "No Round started yet!"
+        "No Round started"
       );
       await expect(
         schneeball["getApproved(uint256,uint256)"](1, 1)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
 
       await expect(
         schneeball.connect(users[1]).setApprovalForAll(users[0].address, true)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
       await expect(
         schneeball["isApprovedForAll(uint256,address,address)"](
           1,
           users[1].address,
           users[0].address
         )
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
     });
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
@@ -459,8 +472,12 @@ describe("Schneeballschlacht", async () => {
       const tokenURI2 = await schneeball["tokenURI(uint256,uint256)"](1, 1);
 
       // TODO: deploy folder to ipfs
-      expect(tokenURI1).to.equal("ipfs://1");
-      expect(tokenURI2).to.equal("ipfs://1");
+      expect(tokenURI1).to.equal(
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf/1"
+      );
+      expect(tokenURI2).to.equal(
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf/1"
+      );
     });
     it("can transfer", async () => {
       const transferTx = await schneeball.transferFrom(
@@ -478,12 +495,12 @@ describe("Schneeballschlacht", async () => {
         schneeball
           .connect(users[0])
           .transferFrom(users[1].address, users[0].address, 1)
-      ).to.revertedWith("Error: Unauthorized!");
+      ).to.revertedWith("Unauthorized");
       await expect(
         schneeball
           .connect(users[1])
           .transferFrom(users[1].address, constants.AddressZero, 1)
-      ).to.revertedWith("Error: zero address");
+      ).to.revertedWith("Zero address");
     });
     it("can safeTransfer", async () => {
       const transferTx = await schneeball
@@ -507,7 +524,7 @@ describe("Schneeballschlacht", async () => {
             users[2].address,
             1
           )
-      ).to.revertedWith("Error: Unauthorized!");
+      ).to.revertedWith("Unauthorized");
     });
     it("can safeTransfer to contract", async () => {
       const NoReceiverTest = await ethers.getContractFactory("NoReceiverTest");
@@ -566,7 +583,7 @@ describe("Schneeballschlacht", async () => {
       );
       await expect(
         schneeball["getApproved(uint256,uint256)"](2, 1)
-      ).to.revertedWith("No Round started yet!");
+      ).to.revertedWith("No Round started");
       await expect(
         schneeball["getApproved(uint256,uint256)"](1, 2)
       ).to.revertedWith("ERC721: invalid token ID");

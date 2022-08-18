@@ -5,11 +5,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./ISchneeballschlacht.sol";
+import "./IEscrow.sol";
 
-contract Escrow {
+contract Escrow is IEscrow {
     using Address for address payable;
-
-    event Withdrawn(address indexed payee, uint256 weiAmount);
 
     ISchneeballschlacht private _schneeballschlacht;
 
@@ -54,6 +53,6 @@ contract Escrow {
         payee.sendValue(payment);
         _hasWithdrawn[payee] = true;
 
-        emit Withdrawn(payee, payment);
+        emit Withdraw(payee, payment);
     }
 }

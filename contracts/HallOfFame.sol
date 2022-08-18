@@ -6,21 +6,15 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
-
-contract OwnableDelegateProxy {}
-
-/**
- * Used to delegate ownership of a contract to another address, to save on unneeded transactions to approve contract use for users
- */
-contract ProxyRegistry {
-    mapping(address => OwnableDelegateProxy) public proxies;
-}
+import "./IHallOfFame.sol";
+import "./OpenSeaPolygonProxy.sol";
 
 contract HallOfFame is
     ERC721,
     AccessControl,
     NativeMetaTransaction,
-    ContextMixin
+    ContextMixin,
+    IHallOfFame
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 

@@ -7,6 +7,7 @@ import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-ethernal";
+import "hardhat-contract-sizer";
 
 dotenv.config();
 
@@ -55,6 +56,7 @@ const config: HardhatUserConfig = {
     uploadAst: true,
     resetOnStart: "localhost",
     workspace: "localhost",
+    disabled: true,
   },
   ethernalAstUpload: true,
 };

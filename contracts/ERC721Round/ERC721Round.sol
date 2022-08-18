@@ -68,7 +68,7 @@ abstract contract ERC721Round is
 
     modifier roundIsValid(uint256 roundId) {
         uint256 _roundId = getRoundId();
-        require(roundId > 0 && roundId <= _roundId , "No Round started yet!");
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet");
         _;
     }
 
@@ -108,9 +108,9 @@ abstract contract ERC721Round is
         override
         returns (uint256)
     {
-        require(owner != address(0), "Error: zero address");
+        require(owner != address(0), "Zero address");
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         return _balances[roundId][owner];
     }
 
@@ -121,7 +121,7 @@ abstract contract ERC721Round is
         roundIsValid(roundId)
         returns (uint256)
     {
-        require(owner != address(0), "Error: zero address");
+        require(owner != address(0), "Zero address");
         return _balances[roundId][owner];
     }
 
@@ -136,9 +136,9 @@ abstract contract ERC721Round is
         returns (address)
     {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         address owner = _owners[roundId][tokenId];
-        require(owner != address(0), "Error: Invalid token");
+        require(owner != address(0), "Invalid token");
         return owner;
     }
 
@@ -149,7 +149,7 @@ abstract contract ERC721Round is
         returns (address)
     {
         address owner = _owners[roundId][tokenId];
-        require(owner != address(0), "Error: Invalid token");
+        require(owner != address(0), "Invalid token");
         return owner;
     }
 
@@ -208,7 +208,7 @@ abstract contract ERC721Round is
         returns (address)
     {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         _requireMinted(tokenId);
         return _tokenApprovals[roundId][tokenId];
     }
@@ -244,8 +244,7 @@ abstract contract ERC721Round is
         override
         returns (bool)
     {
-        uint256 roundId = getRoundId();
-        return _operatorApprovals[roundId][owner][operator];
+        return _operatorApprovals[getRoundId()][owner][operator];
     }
 
     function isApprovedForAll(
@@ -266,7 +265,7 @@ abstract contract ERC721Round is
     ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "Error: Unauthorized!"
+            "Unauthorized"
         );
 
         _transfer(from, to, tokenId);
@@ -294,7 +293,7 @@ abstract contract ERC721Round is
     ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "Error: Unauthorized!"
+            "Unauthorized"
         );
         _safeTransfer(from, to, tokenId, data);
     }
@@ -339,8 +338,7 @@ abstract contract ERC721Round is
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        uint256 roundId = getRoundId();
-        return _owners[roundId][tokenId] != address(0);
+        return _owners[getRoundId()][tokenId] != address(0);
     }
 
     /**
@@ -434,8 +432,8 @@ abstract contract ERC721Round is
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(ERC721Round.ownerOf(tokenId) == from, "Error: Unauthorized");
-        require(to != address(0), "Error: zero address");
+        require(ERC721Round.ownerOf(tokenId) == from, "Unauthorized");
+        require(to != address(0), "Zero address");
         uint256 roundId = getRoundId();
         _beforeTokenTransfer(from, to, tokenId);
 
@@ -461,8 +459,7 @@ abstract contract ERC721Round is
      * Emits an {Approval} event.
      */
     function _approve(address to, uint256 tokenId) internal virtual {
-        uint256 roundId = getRoundId();
-        _tokenApprovals[roundId][tokenId] = to;
+        _tokenApprovals[getRoundId()][tokenId] = to;
         emit Approval(ERC721Round.ownerOf(tokenId), to, tokenId);
     }
 
@@ -478,7 +475,7 @@ abstract contract ERC721Round is
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
@@ -635,7 +632,7 @@ abstract contract ERC721Round is
 
     function getStartHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         return _rounds[roundId].startHeight;
     }
 
@@ -645,7 +642,7 @@ abstract contract ERC721Round is
 
     function getEndHeight() public view returns (uint256) {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         return _rounds[roundId].endHeight;
     }
 
@@ -656,7 +653,7 @@ abstract contract ERC721Round is
     // TODO: this seem like it would always be 0x0 except for the time between rounds
     function getWinner() public view returns (address) {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         return _rounds[roundId].winner;
     }
 
@@ -669,7 +666,7 @@ abstract contract ERC721Round is
     }
 
     function _setWinner(address winner) internal {
-        require(winner != address(0), "null address");
+        require(winner != address(0), "0 Address");
         uint256 roundId = getRoundId();
         _rounds[roundId].winner = winner;
         emit Winner(roundId, winner);
@@ -744,7 +741,7 @@ abstract contract ERC721Round is
 
     function getPayout() external view returns (uint256) {
         uint256 roundId = getRoundId();
-        require(roundId > 0, "No Round started yet!");
+        require(roundId > 0, "No Round started");
         return _rounds[roundId].totalPayout;
     }
 

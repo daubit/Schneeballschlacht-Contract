@@ -10,10 +10,6 @@ contract EscrowManagerTest is EscrowManager {
     function addEscrow(uint256 round, ISchneeballschlacht schneeballschlacht)
         external
     {
-        _addEscrow(round, new Escrow(round, schneeballschlacht));
-    }
-
-    function addEscrow2(uint256 round, Escrow escrow) external {
-        _addEscrow(round, escrow);
+        _addEscrow(round, schneeballschlacht);
     }
 }

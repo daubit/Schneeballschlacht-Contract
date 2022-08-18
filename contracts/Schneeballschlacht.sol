@@ -4,12 +4,14 @@ pragma solidity 0.8.16;
 
 import "./ERC721Round/ERC721Round.sol";
 import "./EscrowManager.sol";
-import "./Escrow.sol";
-import "./HallOfFame.sol";
+import "./IEscrow.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
+import "./IHallOfFame.sol";
+import "./OpenSeaPolygonProxy.sol";
 
 contract Schneeballschlacht is
     ISchneeballschlacht,
@@ -29,7 +31,7 @@ contract Schneeballschlacht is
     uint256 private constant MINT_FEE = 0.05 ether;
     uint256 private constant TOSS_FEE = 0.01 ether;
 
-    HallOfFame private immutable _hof;
+    IHallOfFame private immutable _hof;
     address private _proxyRegistryAddress;
 
     string private _baseURI;
@@ -78,7 +80,7 @@ contract Schneeballschlacht is
         uint8 coolDownlength
     ) ERC721Round("Schneeballschlacht", "Schneeball") {
         _pause();
-        _hof = HallOfFame(hof);
+        _hof = IHallOfFame(hof);
         _finished = false;
         _baseURI = baseURI;
         _contractURI = __contractURI;
@@ -98,7 +100,7 @@ contract Schneeballschlacht is
         uint256 roundId = getRoundId();
         uint256[] memory partners = _snowballs[roundId][tokenId].partners;
         for (uint256 index; index < partners.length; index++) {
-            require(ownerOf(partners[index]) != to, "No double transfer!");
+            require(ownerOf(partners[index]) != to, "No double transfer");
         }
         _;
     }
@@ -247,7 +249,7 @@ contract Schneeballschlacht is
     ) public view returns (Query[] memory) {
         uint256 total = totalSupply(roundId) - 1;
         uint256 from = (amount * page) + 1;
-        require(from < total, "Out of bounds!");
+        require(from < total, "Out of bounds");
         uint256 to = from + amount <= total ? from + amount : total;
         uint256 i;
         Query[] memory result = new Query[](to - from + 1);
@@ -285,7 +287,7 @@ contract Schneeballschlacht is
      * @param to address to send the snowball to
      */
     function mint(address to) public payable whenNotFinished whenNotPaused {
-        require(msg.value == MINT_FEE, "Error: Insufficient fee!");
+        require(msg.value == MINT_FEE, "Insufficient fee");
         _mint(to, 1, 0);
     }
 
@@ -339,12 +341,12 @@ contract Schneeballschlacht is
         isTransferable(tokenId, to)
         senderNotTimeoutedOrOnCooldown
     {
-        require(ownerOf(tokenId) == msg.sender, "Error: Not owner");
-        require(to != msg.sender, "Error: Self Toss");
-        require(to != address(0), "Error: zero address");
+        require(ownerOf(tokenId) == msg.sender, "Not owner");
+        require(to != msg.sender, "Self Toss");
+        require(to != address(0), "zero address");
         uint256 roundId = getRoundId();
         uint8 level = _snowballs[roundId][tokenId].level;
-        require(msg.value == TOSS_FEE * level, "Insufficient fee!");
+        require(msg.value == TOSS_FEE * level, "Insufficient fee");
 
         uint256 newTokenId = _mint(to, level, tokenId);
         _snowballs[roundId][tokenId].partners.push(newTokenId);
@@ -625,8 +627,7 @@ contract Schneeballschlacht is
         )
     {
         uint256 round = getRoundId();
-        Escrow escrow = new Escrow(round, this);
-        _addEscrow(round, escrow);
+        IEscrow escrow = _addEscrow(round, this);
         uint256 total = _tosses[round];
         // 1% of total is bonus for the winner
         uint256 bonusForWinner = max(total / 100, 1);

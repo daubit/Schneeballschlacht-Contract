@@ -2,6 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Contract } from "ethers";
 import { ethers } from "hardhat";
+import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
 
 describe("Schneeballschlacht - HOF", async () => {
   let hof: Contract;
@@ -15,7 +16,11 @@ describe("Schneeballschlacht - HOF", async () => {
 
       // Deploy Schneeballschlacht
       const HOF = await ethers.getContractFactory("HallOfFame");
-      hof = await HOF.connect(users[0]).deploy("ipfs://", "ipfs://1");
+      hof = await HOF.connect(users[0]).deploy(
+        "ipfs://",
+        "ipfs://1",
+        REGISTRY_ADDRESS_ADDRESS
+      );
       await hof.deployed();
     });
     it("can start successfully", async () => {

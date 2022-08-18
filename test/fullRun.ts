@@ -4,6 +4,7 @@ import { expect } from "chai";
 import { Contract } from "ethers";
 import { ethers, network } from "hardhat";
 import { TOSS_FEE } from "../scripts/utils";
+import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
 
 async function mineBlocks() {
   return network.provider.send("hardhat_mine", ["0xA8C0", "0x2"]);
@@ -22,14 +23,24 @@ describe("Schneeballschlacht - Full Run with Maxlevel 3", async () => {
 
       // Deploy Schneeballschlacht
       const HOF = await ethers.getContractFactory("HallOfFame");
-      hof = await HOF.connect(users[0]).deploy("ipfs://", "ipfs://");
+      hof = await HOF.connect(users[0]).deploy(
+        "ipfs://",
+        "ipfs://",
+        REGISTRY_ADDRESS_ADDRESS
+      );
       await hof.deployed();
 
       const SchneeballSchlacht = await ethers.getContractFactory(
-        "SchneeballSchlachtMaxLevel3"
+        "Schneeballschlacht"
       );
       schneeball = await SchneeballSchlacht.connect(users[0]).deploy(
-        hof.address
+        hof.address,
+        3,
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
+        60,
+        15
       );
       await schneeball.deployed();
     });
