@@ -3,7 +3,7 @@
 pragma solidity 0.8.16;
 
 import "./ERC721Round/ERC721Round.sol";
-import "./EscrowManager.sol";
+import "./IEscrowManager.sol";
 import "./IEscrow.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -16,7 +16,6 @@ import "./OpenSeaPolygonProxy.sol";
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
-    EscrowManager,
     Pausable,
     ContextMixin,
     NativeMetaTransaction,
@@ -32,6 +31,7 @@ contract Schneeballschlacht is
     uint256 private constant TOSS_FEE = 0.01 ether;
 
     IHallOfFame private immutable _hof;
+    IEscrowManager private immutable _escrowManager;
     address private _proxyRegistryAddress;
 
     string private _baseURI;
@@ -72,6 +72,7 @@ contract Schneeballschlacht is
 
     constructor(
         address hof,
+        address escrowManager,
         uint8 maxLevel,
         string memory baseURI,
         string memory __contractURI,
@@ -81,6 +82,7 @@ contract Schneeballschlacht is
     ) ERC721Round("Schneeballschlacht", "Schneeball") {
         _pause();
         _hof = IHallOfFame(hof);
+        _escrowManager = IEscrowManager(escrowManager);
         _finished = false;
         _baseURI = baseURI;
         _contractURI = __contractURI;
@@ -627,7 +629,7 @@ contract Schneeballschlacht is
         )
     {
         uint256 round = getRoundId();
-        IEscrow escrow = _addEscrow(round, this);
+        IEscrow escrow = _escrowManager.createEscrow(round, this);
         uint256 total = _tosses[round];
         // 1% of total is bonus for the winner
         uint256 bonusForWinner = max(total / 100, 1);

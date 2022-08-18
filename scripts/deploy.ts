@@ -6,7 +6,7 @@
 // Runtime Environment's members available in the global scope.
 import hardhat, { ethers } from "hardhat";
 import { Storage } from "./storage";
-import { REGISTRY_ADDRESS_ADDRESS } from "./util/const.json";
+import { REGISTRY_ADDRESS_TESTNET } from "./util/const.json";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,7 +26,11 @@ async function main() {
   const { provider } = ethers;
   const chainId = (await provider.getNetwork()).chainId;
   const storage = new Storage("addresses.json");
-  let { sbs: sbsAddress, hof: hofAddress } = storage.fetch(network.chainId);
+  let {
+    sbs: sbsAddress,
+    hof: hofAddress,
+    escrow: escrowAddress,
+  } = storage.fetch(network.chainId);
   const addresses: any = {};
   // We get the contract to deploy
   if (!hofAddress) {
@@ -34,7 +38,7 @@ async function main() {
     const hof = await HOF.deploy(
       "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
       "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
-      REGISTRY_ADDRESS_ADDRESS
+      REGISTRY_ADDRESS_TESTNET
     );
     await hof.deployed();
     addresses.hof = hof.address;
@@ -49,8 +53,24 @@ async function main() {
       constructorArgsParams: [
         "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
         "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
       ],
+    });
+  }
+  if (!escrowAddress) {
+    const EscrowManager = await ethers.getContractFactory("EscrowManager");
+    const em = await EscrowManager.deploy();
+    await em.deployed();
+    addresses.escrow = em.address;
+    escrowAddress = em.address;
+    console.log("Escrow Manager deployed to:", em.address);
+
+    console.log("Waiting for verification...");
+    await sleep(60 * 1000);
+    hardhat.run("verify", {
+      address: em.address,
+      network: networkName(chainId),
+      constructorArgsParams: [],
     });
   }
   if (!sbsAddress) {
@@ -60,7 +80,7 @@ async function main() {
       3,
       "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
       "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-      REGISTRY_ADDRESS_ADDRESS,
+      REGISTRY_ADDRESS_TESTNET,
       60,
       15
     );
@@ -77,7 +97,7 @@ async function main() {
         "3",
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         "60",
         "15",
       ],
@@ -88,10 +108,15 @@ async function main() {
 
     const HOF = await ethers.getContractFactory("HallOfFame");
     const hof = HOF.attach(hofAddress ?? addresses.hof);
-    const grantRoleTx = await hof.grantRole(
+    let grantRoleTx = await hof.grantRole(
       "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
       addresses.sbs
     );
+    await grantRoleTx.wait();
+
+    const EM = await ethers.getContractFactory("EscrowManager");
+    const em = EM.attach(escrowAddress ?? addresses.escrow);
+    grantRoleTx = await em.grantRole(em.ESCROW_ROLE(), addresses.sbs);
     await grantRoleTx.wait();
   }
   storage.save(network.chainId, addresses);

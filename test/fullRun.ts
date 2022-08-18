@@ -4,7 +4,6 @@ import { expect } from "chai";
 import { Contract } from "ethers";
 import { ethers, network } from "hardhat";
 import { TOSS_FEE } from "../scripts/utils";
-import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
 
 async function mineBlocks() {
   return network.provider.send("hardhat_mine", ["0xA8C0", "0x2"]);
@@ -21,28 +20,45 @@ describe("Schneeballschlacht - Full Run with Maxlevel 3", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
+      const REGISTRY = await ethers.getContractFactory("TestProxyRegistry");
+      const registry = await REGISTRY.connect(users[0]).deploy();
+      await registry.deployed();
+
       // Deploy Schneeballschlacht
       const HOF = await ethers.getContractFactory("HallOfFame");
       hof = await HOF.connect(users[0]).deploy(
         "ipfs://",
         "ipfs://",
-        REGISTRY_ADDRESS_ADDRESS
+        registry.address
       );
       await hof.deployed();
+
+      const EscrowManager = await ethers.getContractFactory(
+        "TestEscrowManager"
+      );
+      const escrowManager = await EscrowManager.deploy();
+      await escrowManager.deployed();
 
       const SchneeballSchlacht = await ethers.getContractFactory(
         "Schneeballschlacht"
       );
       schneeball = await SchneeballSchlacht.connect(users[0]).deploy(
         hof.address,
+        escrowManager.address,
         3,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        registry.address,
         60,
         15
       );
       await schneeball.deployed();
+
+      const grantTx = await escrowManager.grantRole(
+        escrowManager.ESCROW_ROLE(),
+        schneeball.address
+      );
+      await grantTx.wait();
     });
     it("give schneeballschlacht minter role on hof", async () => {
       const grantTx = await hof

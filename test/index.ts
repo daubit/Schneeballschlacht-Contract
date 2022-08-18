@@ -7,7 +7,7 @@ import { BigNumber, constants, Contract } from "ethers";
 import * as hardhat from "hardhat";
 import { MINT_FEE, TOSS_FEE } from "../scripts/utils";
 import { SnowballStruct } from "../typechain-types/contracts/Schneeballschlacht";
-import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
+import { REGISTRY_ADDRESS_TESTNET } from "../scripts/util/const.json";
 
 const ethers = hardhat.ethers;
 
@@ -34,10 +34,11 @@ describe("Schneeballschlacht", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );
@@ -93,10 +94,11 @@ describe("Schneeballschlacht", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );
@@ -203,10 +205,11 @@ describe("Schneeballschlacht", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );
@@ -431,14 +434,19 @@ describe("Schneeballschlacht", async () => {
       // Setting up accounts
       users = await ethers.getSigners();
 
+      const REGISTRY = await ethers.getContractFactory("TestProxyRegistry");
+      const registry = await REGISTRY.connect(users[0]).deploy();
+      await registry.deployed();
+
       // Deploy Schneeballschlacht
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        registry.address,
         60,
         15
       );
@@ -649,6 +657,7 @@ describe("Schneeballschlacht", async () => {
         "SchneeballSchlachtTimeoutTest"
       );
       schneeball = await SchneeballSchlachtTimeoutTest.deploy(
+        ethers.constants.AddressZero,
         ethers.constants.AddressZero
       );
       await schneeball.deployed();

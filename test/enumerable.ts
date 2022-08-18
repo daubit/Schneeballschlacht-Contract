@@ -5,7 +5,7 @@ import { expect } from "chai";
 import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import { MINT_FEE } from "../scripts/utils";
-import { REGISTRY_ADDRESS_ADDRESS } from "../scripts/util/const.json";
+import { REGISTRY_ADDRESS_TESTNET } from "../scripts/util/const.json";
 
 describe("Schneeballschlacht - Enumerable", async () => {
   let schneeball: Contract;
@@ -21,10 +21,11 @@ describe("Schneeballschlacht - Enumerable", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );
@@ -93,10 +94,11 @@ describe("Schneeballschlacht - Enumerable", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );
@@ -175,10 +177,11 @@ describe("Schneeballschlacht - Enumerable", async () => {
       const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
       schneeball = await Schneeball.deploy(
         ethers.constants.AddressZero,
+        ethers.constants.AddressZero,
         5,
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_ADDRESS,
+        REGISTRY_ADDRESS_TESTNET,
         60,
         15
       );

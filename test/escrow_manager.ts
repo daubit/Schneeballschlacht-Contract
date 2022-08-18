@@ -32,16 +32,19 @@ describe("Schneeballschlacht - EscrowManager", async () => {
     it("pull payment", async () => {
       const userAddress = users[0];
       const EscrowManager = await ethers.getContractFactory(
-        "EscrowManagerTest"
+        "TestEscrowManager"
       );
       const escrowManager = await EscrowManager.deploy();
       await escrowManager.deployed();
 
       const Escrow = await ethers.getContractFactory("Escrow");
 
-      const addEscrow1 = await escrowManager.addEscrow(1, schneeball.address);
+      const addEscrow1 = await escrowManager.createEscrow(
+        1,
+        schneeball.address
+      );
       await addEscrow1.wait();
-      const addEscrowRevert = escrowManager.addEscrow(1, schneeball.address);
+      const addEscrowRevert = escrowManager.createEscrow(1, schneeball.address);
       expect(addEscrowRevert).to.be.reverted;
 
       const escrowRound1Address = await escrowManager.getEscrow(1);
