@@ -52,7 +52,9 @@ interface Metadata {
 }
 
 function readFile(fileName: string): Metadata[] {
-  return JSON.parse(readFileSync(`${fileName}.json`, "utf8"));
+  return JSON.parse(readFileSync(`${fileName}.json`, "utf8")).map(
+    (x: any) => x.data
+  );
 }
 
 // eslint-disable-next-line no-unused-vars

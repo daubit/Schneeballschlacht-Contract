@@ -6,6 +6,7 @@
 // Runtime Environment's members available in the global scope.
 import hardhat, { ethers } from "hardhat";
 import { Storage } from "./storage";
+import { REGISTRY_ADDRESS_ADDRESS } from "./util/const.json";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -31,8 +32,9 @@ async function main() {
   if (!hofAddress) {
     const HOF = await ethers.getContractFactory("HallOfFame");
     const hof = await HOF.deploy(
-      "QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
-      "QmTRZbTVWJHtJ8JMYyh8jhKy8hH2CGgVDWTfobcnVdq8Cs"
+      "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
+      "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
+      REGISTRY_ADDRESS_ADDRESS
     );
     await hof.deployed();
     addresses.hof = hof.address;
@@ -46,7 +48,8 @@ async function main() {
       network: networkName(chainId),
       constructorArgsParams: [
         "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
-        "ipfs://QmTRZbTVWJHtJ8JMYyh8jhKy8hH2CGgVDWTfobcnVdq8Cs",
+        "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
+        REGISTRY_ADDRESS_ADDRESS,
       ],
     });
   }
@@ -55,9 +58,11 @@ async function main() {
     const sbs = await Sbs.deploy(
       hofAddress,
       3,
-      "ipfs://QmdotB3KQb9YuodG4TXLSu4sMtnfy5EpgcfuZC9RPP6yyS",
-      15,
-      60
+      "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+      "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+      REGISTRY_ADDRESS_ADDRESS,
+      60,
+      15
     );
     await sbs.deployed();
 
@@ -70,9 +75,11 @@ async function main() {
       constructorArgsParams: [
         hofAddress,
         "3",
-        "ipfs://QmdotB3KQb9YuodG4TXLSu4sMtnfy5EpgcfuZC9RPP6yyS",
-        "15",
+        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+        REGISTRY_ADDRESS_ADDRESS,
         "60",
+        "15",
       ],
     });
 
