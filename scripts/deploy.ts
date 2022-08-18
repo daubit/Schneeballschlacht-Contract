@@ -85,6 +85,14 @@ async function main() {
 
     addresses.sbs = sbs.address;
     console.log("Schneeballschlacht deployed to:", sbs.address);
+
+    const HOF = await ethers.getContractFactory("HallOfFame");
+    const hof = HOF.attach(hofAddress ?? addresses.hof);
+    const grantRoleTx = await hof.grantRole(
+      "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+      addresses.sbs
+    );
+    await grantRoleTx.wait();
   }
   storage.save(network.chainId, addresses);
 }
