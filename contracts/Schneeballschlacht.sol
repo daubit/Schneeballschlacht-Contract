@@ -8,12 +8,17 @@ import "./Escrow.sol";
 import "./HallOfFame.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./common/meta-transactions/ContentMixin.sol";
+import "./common/meta-transactions/NativeMetaTransaction.sol";
 
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
     EscrowManager,
-    Pausable
+    Pausable,
+    ContextMixin,
+    NativeMetaTransaction,
+    AccessControl
 {
     using Strings for uint8;
     // ~3 min at 1 Block / 2 secs, block times vary slightly from 2 secs
@@ -25,9 +30,11 @@ contract Schneeballschlacht is
     uint256 private constant TOSS_FEE = 0.01 ether;
 
     HallOfFame private immutable _hof;
+    address private _proxyRegistryAddress;
 
     string private _baseURI;
     string private _contractURI;
+    string private _folderCID;
 
     // Mapping roundId to tokenId to snowball
     mapping(uint256 => mapping(uint256 => Snowball)) private _snowballs;
@@ -61,17 +68,25 @@ contract Schneeballschlacht is
         address indexed to
     );
 
-    constructor(address hof, uint8 maxLevel, string memory baseURI, string memory __contractURI, uint16 timeoutLength, uint8 coolDownlength)
-        ERC721Round("Schneeballschlacht", "Schneeball")
-    {
+    constructor(
+        address hof,
+        uint8 maxLevel,
+        string memory baseURI,
+        string memory __contractURI,
+        address proxyRegistryAddress,
+        uint16 timeoutLength,
+        uint8 coolDownlength
+    ) ERC721Round("Schneeballschlacht", "Schneeball") {
         _pause();
         _hof = HallOfFame(hof);
         _finished = false;
         _baseURI = baseURI;
         _contractURI = __contractURI;
+        _proxyRegistryAddress = proxyRegistryAddress;
         MAX_LEVEL = maxLevel;
         TIMEOUT_BLOCK_LENGTH = timeoutLength;
         COOLDOWN_BLOCK_LENGTH = coolDownlength;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     modifier whenFinished() {
@@ -102,6 +117,24 @@ contract Schneeballschlacht is
             "Cooldown"
         );
         _;
+    }
+
+    /**
+     * @dev Override isApprovedForAll to whitelist user's OpenSea proxy accounts to enable gas-less listings.
+     */
+    function isApprovedForAll(address owner, address operator)
+        public
+        view
+        override
+        returns (bool)
+    {
+        // Whitelist OpenSea proxy contract for easy trading.
+        ProxyRegistry proxyRegistry = ProxyRegistry(_proxyRegistryAddress);
+        if (address(proxyRegistry.proxies(owner)) == operator) {
+            return true;
+        }
+
+        return super.isApprovedForAll(owner, operator);
     }
 
     /**
@@ -221,7 +254,9 @@ contract Schneeballschlacht is
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {
             uint8 level = _snowballs[roundId][tokenId].level;
             // length is uint256 but we can cast to uint8 because max(length) === MAX_LEVEL
-            uint8 partnerCount = uint8(_snowballs[roundId][tokenId].partners.length);
+            uint8 partnerCount = uint8(
+                _snowballs[roundId][tokenId].partners.length
+            );
             bool snowballHasStone = _snowballs[roundId][tokenId].hasStone;
             address player = ownerOf(tokenId);
             Query memory query = Query({
@@ -414,6 +449,78 @@ contract Schneeballschlacht is
     }
 
     /**
+     * @dev Returns the URI of the token based of its level
+     *
+     * @param tokenId uint256
+     * @param roundId uint256
+     */
+    function tokenURI(uint256 roundId, uint256 tokenId)
+        external
+        view
+        override
+        returns (string memory)
+    {
+        return
+            string(
+                abi.encodePacked(
+                    _baseURI,
+                    "/",
+                    _snowballs[roundId][tokenId].level.toString()
+                )
+            );
+    }
+
+    /**
+     * @dev Returns the URI of the token based of its level
+     *
+     * @param tokenId uint256
+     */
+    function tokenURI(uint256 tokenId)
+        external
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        uint256 roundId = getRoundId();
+        return
+            string(
+                abi.encodePacked(
+                    _baseURI,
+                    "/",
+                    _snowballs[roundId][tokenId].level.toString()
+                )
+            );
+    }
+
+    function contractURI() external view returns (string memory) {
+        return _contractURI;
+    }
+
+    function setBaseURI(string memory __baseURI)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _baseURI = __baseURI;
+    }
+
+    function setContractCID(string memory __contractURI)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _contractURI = __contractURI;
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC721Round, AccessControl)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
+    /**
      * @dev Internal function for handling mint
      *
      * @param to address
@@ -469,29 +576,6 @@ contract Schneeballschlacht is
     }
 
     /**
-     * @dev Returns the URI of the token based of its level
-     *
-     * @param tokenId uint256
-     */
-    function tokenURI(uint256 tokenId)
-        external
-        view
-        virtual
-        override
-        returns (string memory)
-    {
-        uint256 roundId = getRoundId();
-        return
-            string(
-                abi.encodePacked(
-                    _baseURI,
-                    "/",
-                    _snowballs[roundId][tokenId].level.toString()
-                )
-            );
-    }
-
-    /**
      * @dev Internal function for handling the end of a round.
      * Winner is minted a reward NFT
      */
@@ -504,28 +588,6 @@ contract Schneeballschlacht is
     function _end() internal {
         _pause();
         _finished = true;
-    }
-
-    /**
-     * @dev Returns the URI of the token based of its level
-     *
-     * @param tokenId uint256
-     * @param roundId uint256
-     */
-    function tokenURI(uint256 roundId, uint256 tokenId)
-        external
-        view
-        override
-        returns (string memory)
-    {
-        return
-            string(
-                abi.encodePacked(
-                    _baseURI,
-                    "/",
-                    _snowballs[roundId][tokenId].level.toString()
-                )
-            );
     }
 
     /**
@@ -577,6 +639,13 @@ contract Schneeballschlacht is
         return (totalPayout, bonusForWinner, payoutPerToss);
     }
 
+    /**
+     * @dev This is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea.
+     */
+    function _msgSender() internal view override returns (address sender) {
+        return ContextMixin.msgSender();
+    }
+
     function isTimedOut(address addr) external view returns (bool) {
         uint256 roundStart = getStartHeight();
         return
@@ -596,9 +665,5 @@ contract Schneeballschlacht is
         // randomIndex returns [0...parameter - 1] because it uses modulo internally
         // so len([0...parameter - 1]) == parameter
         return _randomIndex(1000) < level;
-    }
-
-    function contractURI() external view returns (string memory) {
-        return _contractURI;
     }
 }
