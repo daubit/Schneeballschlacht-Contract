@@ -669,4 +669,20 @@ contract Schneeballschlacht is
         // so len([0...parameter - 1]) == parameter
         return _randomIndex(1000) < level;
     }
+
+    function withdraw(uint256 round, address payable payee) external {
+        _escrowManager.withdraw(round, payee);
+    }
+
+    function depositsOf(uint256 round, address payee)
+        external
+        view
+        returns (uint256)
+    {
+        return _escrowManager.depositsOf(round, payee);
+    }
+
+    function getEscrow(uint256 round) external view returns (IEscrow) {
+        return _escrowManager.getEscrow(round);
+    }
 }
