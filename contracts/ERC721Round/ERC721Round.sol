@@ -3,12 +3,17 @@
 
 pragma solidity ^0.8.0;
 
-import "./IERC721Payable.sol";
-import "./IERC721MetadataPayable.sol";
+import "./IERC721Round.sol";
+import "./IERC721MetadataRound.sol";
+import "./IERC721EnumerableRound.sol";
+import "../SnowballStructs.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 /**
@@ -16,14 +21,16 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
  * the Metadata extension, but not including the Enumerable extension, which is available separately as
  * {ERC721Enumerable}.
  */
-contract ERC721Payable is
+abstract contract ERC721Round is
     Context,
     ERC165,
-    IERC721Payable,
-    IERC721MetadataPayable
+    IERC721Round,
+    IERC721MetadataRound,
+    IERC721EnumerableRound
 {
     using Address for address;
     using Strings for uint256;
+    using Counters for Counters.Counter;
 
     // Token name
     string private _name;
@@ -31,17 +38,39 @@ contract ERC721Payable is
     // Token symbol
     string private _symbol;
 
-    // Mapping from token ID to owner address
-    mapping(uint256 => address) private _owners;
+    Counters.Counter private _roundIdCounter;
+    Counters.Counter private _tokenIdCounter;
 
-    // Mapping owner address to token count
-    mapping(address => uint256) private _balances;
+    // Mapping from round id to Round struct
+    mapping(uint256 => Round) private _rounds;
 
-    // Mapping from token ID to approved address
-    mapping(uint256 => address) private _tokenApprovals;
+    // Mapping from round id to mapping from token id to owner address
+    mapping(uint256 => mapping(uint256 => address)) private _owners;
 
-    // Mapping from owner to operator approvals
-    mapping(address => mapping(address => bool)) private _operatorApprovals;
+    // Mapping owner address to token amount
+    mapping(uint256 => mapping(address => uint256)) private _balances;
+
+    // Mapping owner address to index to token id
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
+        private _tokenOwners;
+
+    // Mapping token id to token index in _tokenOwners
+    mapping(uint256 => mapping(uint256 => uint256)) private _tokenOwnersIndex;
+
+    // Mapping from round id to owner to operator approvals
+    mapping(uint256 => mapping(address => mapping(address => bool)))
+        private _operatorApprovals;
+
+    // Mapping from token id to approved address
+    mapping(uint256 => mapping(uint256 => address)) private _tokenApprovals;
+
+    event Winner(uint256 indexed roundId, address indexed player);
+
+    modifier roundIsValid(uint256 roundId) {
+        uint256 _roundId = getRoundId();
+        require(roundId > 0 && roundId <= _roundId , "No Round started yet");
+        _;
+    }
 
     /**
      * @dev Initializes the contract by setting a `name` and a `symbol` to the token collection.
@@ -62,8 +91,10 @@ contract ERC721Payable is
         returns (bool)
     {
         return
-            interfaceId == type(IERC721Payable).interfaceId ||
-            interfaceId == type(IERC721MetadataPayable).interfaceId ||
+            interfaceId == type(IERC721Round).interfaceId ||
+            interfaceId == type(IERC721MetadataRound).interfaceId ||
+            interfaceId == type(IERC721).interfaceId ||
+            interfaceId == type(IERC721Metadata).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -77,11 +108,21 @@ contract ERC721Payable is
         override
         returns (uint256)
     {
-        require(
-            owner != address(0),
-            "ERC721: address zero is not a valid owner"
-        );
-        return _balances[owner];
+        require(owner != address(0), "Zero address");
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        return _balances[roundId][owner];
+    }
+
+    function balanceOf(uint256 roundId, address owner)
+        public
+        view
+        virtual
+        roundIsValid(roundId)
+        returns (uint256)
+    {
+        require(owner != address(0), "Zero address");
+        return _balances[roundId][owner];
     }
 
     /**
@@ -94,8 +135,21 @@ contract ERC721Payable is
         override
         returns (address)
     {
-        address owner = _owners[tokenId];
-        require(owner != address(0), "ERC721: invalid token ID");
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        address owner = _owners[roundId][tokenId];
+        require(owner != address(0), "Invalid token");
+        return owner;
+    }
+
+    function ownerOf(uint256 roundId, uint256 tokenId)
+        external
+        view
+        roundIsValid(roundId)
+        returns (address)
+    {
+        address owner = _owners[roundId][tokenId];
+        require(owner != address(0), "Invalid token");
         return owner;
     }
 
@@ -117,35 +171,22 @@ contract ERC721Payable is
      * @dev See {IERC721Metadata-tokenURI}.
      */
     function tokenURI(uint256 tokenId)
-        public
+        external
         view
         virtual
-        override
-        returns (string memory)
-    {
-        _requireMinted(tokenId);
+        returns (string memory);
 
-        string memory baseURI = _baseURI();
-        return
-            bytes(baseURI).length > 0
-                ? string(abi.encodePacked(baseURI, tokenId.toString()))
-                : "";
-    }
-
-    /**
-     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-     * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
-     * by default, can be overridden in child contracts.
-     */
-    function _baseURI() internal view virtual returns (string memory) {
-        return "";
-    }
+    function tokenURI(uint256, uint256 tokenId)
+        external
+        view
+        virtual
+        returns (string memory);
 
     /**
      * @dev See {IERC721-approve}.
      */
     function approve(address to, uint256 tokenId) public virtual override {
-        address owner = ERC721Payable.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
 
         require(
@@ -166,9 +207,20 @@ contract ERC721Payable is
         override
         returns (address)
     {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
         _requireMinted(tokenId);
+        return _tokenApprovals[roundId][tokenId];
+    }
 
-        return _tokenApprovals[tokenId];
+    function getApproved(uint256 roundId, uint256 tokenId)
+        external
+        view
+        roundIsValid(roundId)
+        returns (address)
+    {
+        _requireMinted(tokenId);
+        return _tokenApprovals[roundId][tokenId];
     }
 
     /**
@@ -192,7 +244,15 @@ contract ERC721Payable is
         override
         returns (bool)
     {
-        return _operatorApprovals[owner][operator];
+        return _operatorApprovals[getRoundId()][owner][operator];
+    }
+
+    function isApprovedForAll(
+        uint256 roundId,
+        address owner,
+        address operator
+    ) external view roundIsValid(roundId) returns (bool) {
+        return _operatorApprovals[roundId][owner][operator];
     }
 
     /**
@@ -202,11 +262,10 @@ contract ERC721Payable is
         address from,
         address to,
         uint256 tokenId
-    ) public payable virtual override {
-        //solhint-disable-next-line max-line-length
+    ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
+            "Unauthorized"
         );
 
         _transfer(from, to, tokenId);
@@ -219,7 +278,7 @@ contract ERC721Payable is
         address from,
         address to,
         uint256 tokenId
-    ) public payable virtual override {
+    ) public virtual override {
         safeTransferFrom(from, to, tokenId, "");
     }
 
@@ -231,10 +290,10 @@ contract ERC721Payable is
         address to,
         uint256 tokenId,
         bytes memory data
-    ) public payable virtual override {
+    ) public virtual override {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
-            "ERC721: caller is not token owner nor approved"
+            "Unauthorized"
         );
         _safeTransfer(from, to, tokenId, data);
     }
@@ -279,7 +338,7 @@ contract ERC721Payable is
      * and stop existing when they are burned (`_burn`).
      */
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
-        return _owners[tokenId] != address(0);
+        return _owners[getRoundId()][tokenId] != address(0);
     }
 
     /**
@@ -295,7 +354,7 @@ contract ERC721Payable is
         virtual
         returns (bool)
     {
-        address owner = ERC721Payable.ownerOf(tokenId);
+        address owner = ERC721Round.ownerOf(tokenId);
         return (spender == owner ||
             isApprovedForAll(owner, spender) ||
             getApproved(tokenId) == spender);
@@ -346,41 +405,15 @@ contract ERC721Payable is
     function _mint(address to, uint256 tokenId) internal virtual {
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
-
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(address(0), to, tokenId);
 
-        _balances[to] += 1;
-        _owners[tokenId] = to;
+        _balances[roundId][to] += 1;
+        _owners[roundId][tokenId] = to;
+        _rounds[roundId].totalSupply++;
 
-        emit Transfer(address(0), to, tokenId);
-
+        _addTokenOwner(to, tokenId);
         _afterTokenTransfer(address(0), to, tokenId);
-    }
-
-    /**
-     * @dev Destroys `tokenId`.
-     * The approval is cleared when the token is burned.
-     *
-     * Requirements:
-     *
-     * - `tokenId` must exist.
-     *
-     * Emits a {Transfer} event.
-     */
-    function _burn(uint256 tokenId) internal virtual {
-        address owner = ERC721Payable.ownerOf(tokenId);
-
-        _beforeTokenTransfer(owner, address(0), tokenId);
-
-        // Clear approvals
-        _approve(address(0), tokenId);
-
-        _balances[owner] -= 1;
-        delete _owners[tokenId];
-
-        emit Transfer(owner, address(0), tokenId);
-
-        _afterTokenTransfer(owner, address(0), tokenId);
     }
 
     /**
@@ -399,20 +432,21 @@ contract ERC721Payable is
         address to,
         uint256 tokenId
     ) internal virtual {
-        require(
-            ERC721Payable.ownerOf(tokenId) == from,
-            "ERC721: transfer from incorrect owner"
-        );
-        require(to != address(0), "ERC721: transfer to the zero address");
-
+        require(ERC721Round.ownerOf(tokenId) == from, "Unauthorized");
+        require(to != address(0), "Zero address");
+        uint256 roundId = getRoundId();
         _beforeTokenTransfer(from, to, tokenId);
 
         // Clear approvals from the previous owner
         _approve(address(0), tokenId);
 
-        _balances[from] -= 1;
-        _balances[to] += 1;
-        _owners[tokenId] = to;
+        _removeOwner(from, tokenId);
+
+        _balances[roundId][from] -= 1;
+        _balances[roundId][to] += 1;
+        _owners[roundId][tokenId] = to;
+
+        _addTokenOwner(to, tokenId);
 
         emit Transfer(from, to, tokenId);
 
@@ -425,8 +459,8 @@ contract ERC721Payable is
      * Emits an {Approval} event.
      */
     function _approve(address to, uint256 tokenId) internal virtual {
-        _tokenApprovals[tokenId] = to;
-        emit Approval(ERC721Payable.ownerOf(tokenId), to, tokenId);
+        _tokenApprovals[getRoundId()][tokenId] = to;
+        emit Approval(ERC721Round.ownerOf(tokenId), to, tokenId);
     }
 
     /**
@@ -440,7 +474,9 @@ contract ERC721Payable is
         bool approved
     ) internal virtual {
         require(owner != operator, "ERC721: approve to caller");
-        _operatorApprovals[owner][operator] = approved;
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        _operatorApprovals[roundId][owner][operator] = approved;
         emit ApprovalForAll(owner, operator, approved);
     }
 
@@ -531,18 +567,185 @@ contract ERC721Payable is
         uint256 tokenId
     ) internal virtual {}
 
-    function _createPartner(address to, uint256 newTokenId) internal {
-        _balances[to] += 1;
-        _owners[newTokenId] = to;
+    function _addTokenOwner(address to, uint256 tokenId) internal {
+        // assumes that balanceOf was already increased
+        uint256 length = balanceOf(to) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        _tokenOwners[round][to][length] = tokenId;
+        _tokenOwnersIndex[round][tokenId] = length;
     }
 
-    // Reset contract state
-    function _reset(uint256 totalSupply) internal {
-        for (uint256 i = 1; i < totalSupply; i++) {
-            address currentOwner = _owners[i];
-            _owners[i] = address(0);
-            _balances[currentOwner] = 0;
-            _tokenApprovals[i] = address(0);
+    // adapted from from _removeTokenFromOwnerEnumeration (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/extensions/ERC721Enumerable.sol)
+    function _removeOwner(address from, uint256 tokenId) internal {
+        // To prevent a gap in from's tokens array, we store the last token in the index of the token to delete, and
+        // then delete the last slot (swap and pop).
+
+        // assumes balance was not already decremented
+        uint256 lastTokenIndex = balanceOf(from) - 1;
+        uint32 round = uint32(_roundIdCounter.current());
+        uint256 tokenIndex = _tokenOwnersIndex[round][tokenId];
+
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = _tokenOwners[round][from][lastTokenIndex];
+
+            _tokenOwners[round][from][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            _tokenOwnersIndex[round][lastTokenId] = tokenIndex; // Update the moved token's index
         }
+
+        // This also deletes the contents at the last position of the array
+        delete _tokenOwnersIndex[round][tokenId];
+        delete _tokenOwners[round][from][lastTokenIndex];
+    }
+
+    function totalSupply() public view virtual returns (uint256) {
+        return getTokenId();
+    }
+
+    function totalSupply(uint256 roundId)
+        public
+        view
+        virtual
+        returns (uint256)
+    {
+        require(roundId > 0 && roundId <= getRoundId(), "Invalid id");
+        return _rounds[roundId].totalSupply;
+    }
+
+    function getRoundId() public view returns (uint256) {
+        return _roundIdCounter.current();
+    }
+
+    function _newRoundId() internal returns (uint256) {
+        _roundIdCounter.increment();
+        return _roundIdCounter.current();
+    }
+
+    function getTokenId() internal view returns (uint256) {
+        return _tokenIdCounter.current();
+    }
+
+    function _newTokenId() internal returns (uint256) {
+        _tokenIdCounter.increment();
+        return _tokenIdCounter.current();
+    }
+
+    function getStartHeight() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        return _rounds[roundId].startHeight;
+    }
+
+    function getStartHeight(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
+        return _rounds[roundId].startHeight;
+    }
+
+    function getEndHeight() public view returns (uint256) {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        return _rounds[roundId].endHeight;
+    }
+
+    function getEndHeight(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
+        return _rounds[roundId].endHeight;
+    }
+
+    // TODO: this seem like it would always be 0x0 except for the time between rounds
+    function getWinner() public view returns (address) {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        return _rounds[roundId].winner;
+    }
+
+    function getWinner(uint256 roundId) public view roundIsValid(roundId) returns (address) {
+        return _rounds[roundId].winner;
+    }
+
+    function getWinnerBonus(uint256 roundId) public view roundIsValid(roundId) returns (uint256) {
+        return _rounds[roundId].winnerBonus;
+    }
+
+    function _setWinner(address winner) internal {
+        require(winner != address(0), "0 Address");
+        uint256 roundId = getRoundId();
+        _rounds[roundId].winner = winner;
+        emit Winner(roundId, winner);
+    }
+
+    function getPayoutPerToss(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
+        return _rounds[roundId].payoutPerToss;
+    }
+
+    function _startRound() internal {
+        uint256 endHeight = block.number + (31 days / 2 seconds);
+        uint256 newRound = _newRoundId();
+        _rounds[newRound] = Round({
+            startHeight: block.number,
+            endHeight: endHeight,
+            winner: address(0),
+            totalSupply: 0,
+            payoutPerToss: 0,
+            totalPayout: 0,
+            winnerBonus: 0
+        });
+        _tokenIdCounter.reset();
+    }
+
+    function _endRound(
+        uint256 totalPayout,
+        uint256 winnerBonus,
+        uint256 payoutPerToss
+    ) internal {
+        uint256 total = getTokenId();
+        uint256 roundId = getRoundId();
+
+        _rounds[roundId].totalPayout = totalPayout;
+        _rounds[roundId].totalSupply = total;
+        _rounds[roundId].winnerBonus = winnerBonus;
+        _rounds[roundId].payoutPerToss = payoutPerToss;
+        _rounds[roundId].endHeight = block.number;
+    }
+
+    function getTokensOfAddress(uint256 round, address addr)
+        public
+        view
+        virtual
+        returns (uint256[] memory)
+    {
+        uint256 amount = balanceOf(round, addr);
+        uint256[] memory ret = new uint256[](amount);
+
+        for (uint256 index; index < amount; index++) {
+            ret[index] = _tokenOwners[round][addr][index];
+        }
+
+        return ret;
+    }
+
+    function getTokensOfAddress(address addr)
+        external
+        view
+        virtual
+        returns (uint256[] memory)
+    {
+        return getTokensOfAddress(_roundIdCounter.current(), addr);
+    }
+
+    function getTokenOwner(
+        uint256 roundId,
+        address addr,
+        uint256 index
+    ) public view virtual roundIsValid(roundId) returns (uint256) {
+        return _tokenOwners[roundId][addr][index];
+    }
+
+    function getPayout() external view returns (uint256) {
+        uint256 roundId = getRoundId();
+        require(roundId > 0, "No Round started");
+        return _rounds[roundId].totalPayout;
+    }
+
+    function getPayout(uint256 roundId) external view roundIsValid(roundId) returns (uint256) {
+        return _rounds[roundId].totalPayout;
     }
 }
