@@ -366,7 +366,7 @@ contract Schneeballschlacht is
 
         // Next level up also mints randomly
         if (level + 1 < MAX_LEVEL && amountOfPartners == level + 1) {
-            _levelup(to, tokenId);
+            _levelup(tokenId);
         }
         // Last snowball is minted => game is over
         else if (level < MAX_LEVEL && amountOfPartners == level + 1) {
@@ -554,10 +554,9 @@ contract Schneeballschlacht is
      * Function will level up as long as the next level is not max level,
      * because it has to be garanteed that the address achieving max level gets the max level snowball
      *
-     * @param to address
      * @param tokenId uint256
      */
-    function _levelup(address to, uint256 tokenId) internal {
+    function _levelup(uint256 tokenId) internal {
         uint256 roundId = getRoundId();
         uint256 amountOldPartners = _snowballs[roundId][tokenId]
             .partners
@@ -570,11 +569,11 @@ contract Schneeballschlacht is
 
         uint256 randIndex = _randomIndex(partners.length);
         uint256 randToken = partners[randIndex];
-        uint8 randLevel = _snowballs[roundId][randToken].level;
+        uint8 level = _snowballs[roundId][tokenId].level;
         // toss handles level up to max since it ends the game
         // otherwise level up in here
-        if (randLevel + 1 < MAX_LEVEL) {
-            uint256 upgradedTokenId = _mint(ownerOf(randToken), randLevel + 1, tokenId);
+        if (level + 1 < MAX_LEVEL) {
+            uint256 upgradedTokenId = _mint(ownerOf(randToken), level + 1, tokenId);
             emit LevelUp(roundId, upgradedTokenId);
         }
     }
