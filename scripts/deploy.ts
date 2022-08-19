@@ -77,12 +77,13 @@ async function main() {
     const Sbs = await ethers.getContractFactory("Schneeballschlacht");
     const sbs = await Sbs.deploy(
       hofAddress,
+      escrowAddress,
       3,
       "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
       "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
       REGISTRY_ADDRESS_TESTNET,
-      60,
-      15
+      2,
+      1
     );
     await sbs.deployed();
 
@@ -94,12 +95,13 @@ async function main() {
       network: networkName(chainId),
       constructorArgsParams: [
         hofAddress,
+        escrowAddress,
         "3",
         "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
         "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
         REGISTRY_ADDRESS_TESTNET,
-        "60",
-        "15",
+        "2",
+        "1",
       ],
     });
 

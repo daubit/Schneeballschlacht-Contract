@@ -9,4 +9,8 @@ contract TestEscrowManager is EscrowManager {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(ESCROW_ROLE, msg.sender);
     }
+
+    function __dummy(uint256 a, uint256 b) external view returns (uint256) {
+        return a + b;
+    }  
 }

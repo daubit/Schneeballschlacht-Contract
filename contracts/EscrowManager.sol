@@ -11,6 +11,10 @@ contract EscrowManager is IEscrowManager, AccessControl {
 
     bytes32 public constant ESCROW_ROLE = keccak256("ESCROW_ROLE");
 
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     function withdraw(uint256 round, address payable payee) external {
         _escrow[round].withdraw(payee);
     }

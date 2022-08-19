@@ -574,7 +574,7 @@ contract Schneeballschlacht is
         // toss handles level up to max since it ends the game
         // otherwise level up in here
         if (randLevel + 1 < MAX_LEVEL) {
-            uint256 upgradedTokenId = _mint(to, randLevel + 1, tokenId);
+            uint256 upgradedTokenId = _mint(ownerOf(randToken), randLevel + 1, tokenId);
             emit LevelUp(roundId, upgradedTokenId);
         }
     }
