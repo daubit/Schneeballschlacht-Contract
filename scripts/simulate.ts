@@ -25,6 +25,7 @@ import {
   TOKEN_FILE,
   TOSS_FEE,
 } from "./utils";
+import { REGISTRY_ADDRESS_TESTNET } from "./util/const.json";
 
 let history: Action[] = [];
 
@@ -164,18 +165,27 @@ async function withdrawAll(id: number, contract: Contract, round: number) {
 
 async function simulate(id: number, n: number, maxLevel: number) {
   const HOF = await ethers.getContractFactory("HallOfFame");
-  const hof = await HOF.deploy("ipfs://", "ipfs://");
+  const hof = await HOF.deploy("ipfs://", "ipfs://", REGISTRY_ADDRESS_TESTNET);
   await ethernal.push({
     name: "HallOfFame",
     address: hof.address,
   });
+  const EscrowManager = await ethers.getContractFactory("EscrowManager");
+  const em = await EscrowManager.deploy();
+  await ethernal.push({
+    name: "EscrowManager",
+    address: em.address,
+  });
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy(
     hof.address,
+    em.address,
     maxLevel,
     "ipfs://",
-    15,
-    60
+    "ipfs://",
+    REGISTRY_ADDRESS_TESTNET,
+    2,
+    1
   );
   await ethernal.push({
     name: "Schneeballschlacht",
