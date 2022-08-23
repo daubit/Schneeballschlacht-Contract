@@ -155,11 +155,17 @@ async function payout(id: number, contract: Contract, round: number) {
 
 async function withdrawAll(id: number, contract: Contract, round: number) {
   for (const address of sim.addresses) {
-    const signer = await ethers.getSigner(address);
-    const withdraw = await contract
-      .connect(signer)
-      ["withdraw(uint256,address)"](round, address);
-    await withdraw.wait();
+    try {
+      const signer = await ethers.getSigner(address);
+      const withdraw = await contract
+        .connect(signer)
+        ["withdraw(uint256,address)"](round, address);
+      await withdraw.wait();
+    } catch (e) {
+      console.log(
+        `tried to withdraw but got error, may or may not really matter ${e}`
+      );
+    }
   }
 }
 
@@ -192,9 +198,13 @@ async function simulate(id: number, n: number, maxLevel: number) {
     address: schneeball.address,
   });
   console.log("Contract deployed!");
-  const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
+  let grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
   await grantRoleTx.wait();
   console.log("Schneeballschlacht has been granted MINTER_ROLE");
+  grantRoleTx = await em.grantRole(await em.ESCROW_ROLE(), schneeball.address);
+  await grantRoleTx.wait();
+  console.log("Schneeballschlacht has been granted ESCROW_ROLE");
+
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
     await newRound(id, round, schneeball);
