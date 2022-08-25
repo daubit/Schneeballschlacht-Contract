@@ -38,6 +38,12 @@ const config: HardhatUserConfig = {
     polygon: { url: polygonNodeUrl, accounts: { mnemonic: MNEMONIC } },
     evmos: { url: evmosNodeUrl, accounts: { mnemonic: MNEMONIC } },
     evmosDev: { url: evmosDevNodeUrl, accounts: { mnemonic: MNEMONIC } },
+    evmoslocal: {
+      url: "http://localhost:8080",
+      accounts: {
+        mnemonic: MNEMONIC,
+      },
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

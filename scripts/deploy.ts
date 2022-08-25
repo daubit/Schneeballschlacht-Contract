@@ -7,6 +7,7 @@
 import hardhat, { ethers } from "hardhat";
 import { Storage } from "./storage";
 import { REGISTRY_ADDRESS_TESTNET } from "./util/const.json";
+import { verify } from "./utils";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -47,15 +48,11 @@ async function main() {
 
     console.log("Waiting for verification...");
     await sleep(60 * 1000);
-    hardhat.run("verify", {
-      address: hof.address,
-      network: networkName(chainId),
-      constructorArgsParams: [
-        "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
-        "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
-        REGISTRY_ADDRESS_TESTNET,
-      ],
-    });
+    await verify(hardhat, hof.address, chainId, [
+      "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
+      "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
+      REGISTRY_ADDRESS_TESTNET,
+    ]);
   }
   if (!escrowAddress) {
     const EscrowManager = await ethers.getContractFactory("EscrowManager");
@@ -67,11 +64,7 @@ async function main() {
 
     console.log("Waiting for verification...");
     await sleep(60 * 1000);
-    hardhat.run("verify", {
-      address: em.address,
-      network: networkName(chainId),
-      constructorArgsParams: [],
-    });
+    await verify(hardhat, em.address, chainId, []);
   }
   if (!sbsAddress) {
     const Sbs = await ethers.getContractFactory("Schneeballschlacht");
@@ -90,20 +83,16 @@ async function main() {
     console.log("Schneeballschlacht deployed to:", sbs.address);
     console.log("Waiting for verification...");
     await sleep(60 * 1000);
-    hardhat.run("verify", {
-      address: sbs.address,
-      network: networkName(chainId),
-      constructorArgsParams: [
-        hofAddress,
-        escrowAddress,
-        "3",
-        "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
-        "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
-        REGISTRY_ADDRESS_TESTNET,
-        "2",
-        "1",
-      ],
-    });
+    await verify(hardhat, sbs.address, chainId, [
+      hofAddress,
+      escrowAddress,
+      "3",
+      "ipfs://Qmb9rdB5Fb5GsHP495NkYSgJHArWuhKwapB6WdbwYfBCaf",
+      "ipfs://QmeD8EqWfoKg3GBjQrVPLxPMChADdq7r9D6L8T3y5vdkqT",
+      REGISTRY_ADDRESS_TESTNET,
+      "2",
+      "1",
+    ]);
 
     addresses.sbs = sbs.address;
     console.log("Schneeballschlacht deployed to:", sbs.address);
