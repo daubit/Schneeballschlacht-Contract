@@ -154,11 +154,18 @@ async function payout(id: number, contract: Contract, round: number) {
 
 async function withdrawAll(id: number, contract: Contract, round: number) {
   for (const address of sim.addresses) {
-    const signer = await ethers.getSigner(address);
-    const withdraw = await contract
-      .connect(signer)
+    try {
+
+      const signer = await ethers.getSigner(address);
+      const withdraw = await contract
+        .connect(signer)
       ["withdraw(uint256,address)"](round, address);
-    await withdraw.wait();
+      await withdraw.wait();
+    }
+    catch (e: any) {
+      console.log(e)
+      continue;
+    }
   }
 }
 
