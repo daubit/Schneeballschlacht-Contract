@@ -4,16 +4,20 @@ pragma solidity 0.8.16;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./IHallOfFame.sol";
+// #if OPENSEA_POLYGON
+import "./OpenSeaPolygonProxy.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
-import "./IHallOfFame.sol";
-import "./OpenSeaPolygonProxy.sol";
+// #endif
 
 contract HallOfFame is
     ERC721,
     AccessControl,
+// #if OPENSEA_POLYGON
     NativeMetaTransaction,
     ContextMixin,
+// #endif
     IHallOfFame
 {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -54,12 +58,13 @@ contract HallOfFame is
         override
         returns (bool)
     {
+// #if OPENSEA_POLYGON
         // Whitelist OpenSea proxy contract for easy trading.
         ProxyRegistry proxyRegistry = ProxyRegistry(_proxyRegistryAddress);
         if (address(proxyRegistry.proxies(owner)) == operator) {
             return true;
         }
-
+// #endif
         return super.isApprovedForAll(owner, operator);
     }
 
@@ -100,6 +105,10 @@ contract HallOfFame is
      * @dev This is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea.
      */
     function _msgSender() internal view override returns (address sender) {
+// #if OPENSEA_POLYGON
         return ContextMixin.msgSender();
+// #else
+        return msg.sender;
+// #endif
     }
 }

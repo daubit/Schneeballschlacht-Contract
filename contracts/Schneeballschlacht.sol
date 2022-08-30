@@ -8,17 +8,21 @@ import "./IEscrow.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./IHallOfFame.sol";
+// #if OPENSEA_POLYGON
+import "./OpenSeaPolygonProxy.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
-import "./IHallOfFame.sol";
-import "./OpenSeaPolygonProxy.sol";
+// #endif
 
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
     Pausable,
+// #if OPENSEA_POLYGON
     ContextMixin,
     NativeMetaTransaction,
+// #endif
     AccessControl
 {
     using Strings for uint8;
@@ -132,12 +136,13 @@ contract Schneeballschlacht is
         override
         returns (bool)
     {
+// #if OPENSEA_POLYGON
         // Whitelist OpenSea proxy contract for easy trading.
         ProxyRegistry proxyRegistry = ProxyRegistry(_proxyRegistryAddress);
         if (address(proxyRegistry.proxies(owner)) == operator) {
             return true;
         }
-
+// #endif
         return super.isApprovedForAll(owner, operator);
     }
 
@@ -645,7 +650,11 @@ contract Schneeballschlacht is
      * @dev This is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea.
      */
     function _msgSender() internal view override returns (address sender) {
+// #if OPENSEA_POLYGON
         return ContextMixin.msgSender();
+// #else
+        return msg.sender;
+// #endif
     }
 
     function isTimedOut(address addr) external view returns (bool) {
