@@ -254,10 +254,11 @@ contract Schneeballschlacht is
         uint256 page,
         uint256 amount
     ) public view returns (Query[] memory) {
-        uint256 total = totalSupply(roundId) - 1;
+        require(amount > 0, "Amount > 0");
+        uint256 total = totalSupply(roundId);
         uint256 from = (amount * page) + 1;
-        require(from < total, "Out of bounds");
-        uint256 to = from + amount <= total ? from + amount : total;
+        require(from <= total, "Out of bounds");
+        uint256 to = (amount * page) + amount <= total ? (amount * page) + amount : total;
         uint256 i;
         Query[] memory result = new Query[](to - from + 1);
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {

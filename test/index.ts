@@ -107,6 +107,10 @@ describe("Schneeballschlacht", async () => {
     it("can start successfully", async () => {
       const startTx = await schneeball.startRound();
       await startTx.wait();
+      let totalSupply = await schneeball["totalSupply()"]();
+      expect(Number(totalSupply)).to.equal(1);
+      totalSupply = await schneeball["totalSupply(uint256)"](1);
+      expect(Number(totalSupply)).to.equal(1);
       const endHeight = await schneeball["getEndHeight()"]();
       const currentHeight = await ethers.provider.getBlockNumber();
       expect(Number(endHeight)).to.be.be.greaterThan(Number(currentHeight));
@@ -125,7 +129,9 @@ describe("Schneeballschlacht", async () => {
       // Minted snowball
       const level = await schneeball["getLevel(uint256)"](2);
       expect(Number(level)).to.equal(1);
-      const totalSupply = await schneeball["totalSupply()"]();
+      let totalSupply = await schneeball["totalSupply()"]();
+      expect(Number(totalSupply)).to.equal(2);
+      totalSupply = await schneeball["totalSupply(uint256)"](1);
       expect(Number(totalSupply)).to.equal(2);
     });
     it("getSnowballsOfAddress", async () => {
@@ -165,15 +171,24 @@ describe("Schneeballschlacht", async () => {
 
     it("getTokens", async () => {
       const userAddress = users[0].address;
+      await expect(
+        schneeball["getTokens(uint256,uint256)"](0, 0)
+      ).to.revertedWith("Amount > 0");
       let query: QueryStructOutput[] = await schneeball[
         "getTokens(uint256,uint256)"
-      ](0, 0);
+      ](0, 1);
       expect(query.length).to.equal(1);
       expect(query[0].player).to.equal(userAddress);
       expect(query[0].tokenId).to.equal(1);
       expect(query[0].level).to.equal(1);
 
       query = await schneeball["getTokens(uint256,uint256)"](0, 1);
+      expect(query.length).to.equal(1);
+      expect(query[0].player).to.equal(userAddress);
+      expect(query[0].tokenId).to.equal(1);
+      expect(query[0].level).to.equal(1);
+
+      query = await schneeball["getTokens(uint256,uint256)"](0, 2);
       expect(query.length).to.equal(2);
       expect(query[0].player).to.equal(userAddress);
       expect(query[0].tokenId).to.equal(1);
@@ -183,15 +198,21 @@ describe("Schneeballschlacht", async () => {
       expect(query[1].level).to.equal(1);
 
       query = await schneeball["getTokens(uint256,uint256)"](0, 5);
-      expect(query.length).to.equal(2);
+      expect(query.length).to.equal(3);
 
-      query = await schneeball["getTokens(uint256,uint256)"](0, 0);
+      query = await schneeball["getTokens(uint256,uint256)"](0, 1);
       expect(query.length).to.equal(1);
 
-      query = await schneeball["getTokens(uint256,uint256)"](1, 0);
+      query = await schneeball["getTokens(uint256,uint256)"](1, 1);
       expect(query.length).to.equal(1);
       expect(query[0].player).to.equal(userAddress);
-      expect(query[0].tokenId).to.equal(1);
+      expect(query[0].tokenId).to.equal(2);
+      expect(query[0].level).to.equal(1);
+
+      query = await schneeball["getTokens(uint256,uint256)"](2, 1);
+      expect(query.length).to.equal(1);
+      expect(query[0].player).to.equal(users[1].address);
+      expect(query[0].tokenId).to.equal(3);
       expect(query[0].level).to.equal(1);
     });
   });
