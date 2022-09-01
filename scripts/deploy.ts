@@ -47,7 +47,6 @@ async function main() {
     console.log("Hall of Fame deployed to:", hof.address);
 
     console.log("Waiting for verification...");
-    await sleep(60 * 1000);
     await verify(hardhat, hof.address, chainId, [
       "ipfs://QmeGxiig9wkTHCzivD6XyXJNeGsGvVBTNRyAgEL9YxzzAP",
       "ipfs://QmTy3CmV7batLCuh3t5CGRjSsDk9iJ1LgYSDi8hdCyQ7w2",
@@ -63,7 +62,6 @@ async function main() {
     console.log("Escrow Manager deployed to:", em.address);
 
     console.log("Waiting for verification...");
-    await sleep(60 * 1000);
     await verify(hardhat, em.address, chainId, []);
   }
   if (!sbsAddress) {
@@ -82,7 +80,6 @@ async function main() {
 
     console.log("Schneeballschlacht deployed to:", sbs.address);
     console.log("Waiting for verification...");
-    await sleep(60 * 1000);
     await verify(hardhat, sbs.address, chainId, [
       hofAddress,
       escrowAddress,
