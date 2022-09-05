@@ -262,19 +262,15 @@ contract Schneeballschlacht is
         uint256 i;
         Query[] memory result = new Query[](to - from + 1);
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {
-            uint8 level = _snowballs[roundId][tokenId].level;
             // length is uint256 but we can cast to uint8 because max(length) === MAX_LEVEL
-            uint8 partnerCount = uint8(
-                _snowballs[roundId][tokenId].partners.length
-            );
-            bool snowballHasStone = _snowballs[roundId][tokenId].hasStone;
-            address player = ownerOf(tokenId);
             Query memory query = Query({
-                player: player,
+                player: ownerOf(tokenId),
                 tokenId: tokenId,
-                level: level,
-                partnerCount: partnerCount,
-                hasStone: snowballHasStone
+                level: _snowballs[roundId][tokenId].level,
+                partnerCount: uint8(
+                _snowballs[roundId][tokenId].partners.length
+                ),
+                hasStone: _snowballs[roundId][tokenId].hasStone
             });
             result[i++] = query;
         }
@@ -366,7 +362,7 @@ contract Schneeballschlacht is
 
         if (hasStone(level)) {
             _timeoutStart[to] = block.number;
-            _snowballs[roundId][tokenId].hasStone = true;
+            _snowballs[roundId][newTokenId].hasStone = true;
             emit Timeout(msg.sender, tokenId, to);
         }
 
@@ -693,5 +689,9 @@ contract Schneeballschlacht is
 
     function getEscrow(uint256 round) external view returns (IEscrow) {
         return _escrowManager.getEscrow(round);
+    }
+
+    function finished() external view returns (bool) {
+        return _finished;
     }
 }
