@@ -204,7 +204,7 @@ contract Schneeballschlacht is
     {
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i; i < amountOfPartners; i++) {
+        for (uint256 i = 0; i < amountOfPartners; i++) {
             partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         return partners;
@@ -231,7 +231,7 @@ contract Schneeballschlacht is
         uint256 amount = balanceOf(round, addr);
         Snowball[] memory snowballs = new Snowball[](amount);
 
-        for (uint256 index; index < amount; index++) {
+        for (uint256 index = 0; index < amount; index++) {
             snowballs[index] = _snowballs[round][
                 getTokenOwner(round, addr, index)
             ];
