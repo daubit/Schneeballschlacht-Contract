@@ -654,18 +654,32 @@ contract Schneeballschlacht is
 // #endif
     }
 
-    function isTimedOut(address addr) external view returns (bool) {
+    function isTimedOut(address addr) public view returns (bool) {
         uint256 roundStart = getStartHeight();
         return
             !(_timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number ||
                 _timeoutStart[addr] <= roundStart);
     }
 
-    function isOnCooldown(address addr) external view returns (bool) {
+    function isOnCooldown(address addr) public view returns (bool) {
         uint256 roundStart = getStartHeight();
         return
             !(_cooldownStart[addr] + COOLDOWN_BLOCK_LENGTH <= block.number ||
                 _cooldownStart[addr] <= roundStart);
+    }
+
+    function timedOutTill(address addr) external view returns (bool, uint256) {
+        if(isTimedOut(addr)) {
+            return (true, _timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH);
+        }
+        return (false, 0);
+    }
+
+    function onCooldownTill(address addr) external view returns (bool, uint256) {
+        if(isOnCooldown(addr)) {
+            return (true, _cooldownStart[addr] + COOLDOWN_BLOCK_LENGTH);
+        }
+        return (false, 0);
     }
 
     function hasStone(uint8 level) internal view virtual returns (bool) {
