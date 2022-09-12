@@ -161,10 +161,9 @@ async function withdrawAll(id: number, contract: Contract, round: number) {
         .connect(signer)
         ["withdraw(uint256,address)"](round, address);
       await withdraw.wait();
-    } catch (e) {
-      console.log(
-        `tried to withdraw but got error, may or may not really matter ${e}`
-      );
+    } catch (e: any) {
+      console.log(e);
+      continue;
     }
   }
 }
