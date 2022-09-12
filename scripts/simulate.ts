@@ -25,6 +25,7 @@ import {
   TOKEN_FILE,
   TOSS_FEE,
 } from "./utils";
+import { REGISTRY_ADDRESS_TESTNET } from "./util/const.json";
 
 let history: Action[] = [];
 
@@ -155,15 +156,13 @@ async function payout(id: number, contract: Contract, round: number) {
 async function withdrawAll(id: number, contract: Contract, round: number) {
   for (const address of sim.addresses) {
     try {
-
       const signer = await ethers.getSigner(address);
       const withdraw = await contract
         .connect(signer)
-      ["withdraw(uint256,address)"](round, address);
+        ["withdraw(uint256,address)"](round, address);
       await withdraw.wait();
-    }
-    catch (e: any) {
-      console.log(e)
+    } catch (e: any) {
+      console.log(e);
       continue;
     }
   }
@@ -171,27 +170,40 @@ async function withdrawAll(id: number, contract: Contract, round: number) {
 
 async function simulate(id: number, n: number, maxLevel: number) {
   const HOF = await ethers.getContractFactory("HallOfFame");
-  const hof = await HOF.deploy("ipfs://", "ipfs://");
+  const hof = await HOF.deploy("ipfs://", "ipfs://", REGISTRY_ADDRESS_TESTNET);
   await ethernal.push({
     name: "HallOfFame",
     address: hof.address,
   });
+  const EscrowManager = await ethers.getContractFactory("EscrowManager");
+  const em = await EscrowManager.deploy();
+  await ethernal.push({
+    name: "EscrowManager",
+    address: em.address,
+  });
   const Schneeball = await ethers.getContractFactory("Schneeballschlacht");
   const schneeball = await Schneeball.deploy(
     hof.address,
+    em.address,
     maxLevel,
     "ipfs://",
-    15,
-    60
+    "ipfs://",
+    REGISTRY_ADDRESS_TESTNET,
+    2,
+    1
   );
   await ethernal.push({
     name: "Schneeballschlacht",
     address: schneeball.address,
   });
   console.log("Contract deployed!");
-  const grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
+  let grantRoleTx = await hof.grantRole(MINTER_ROLE, schneeball.address);
   await grantRoleTx.wait();
   console.log("Schneeballschlacht has been granted MINTER_ROLE");
+  grantRoleTx = await em.grantRole(await em.ESCROW_ROLE(), schneeball.address);
+  await grantRoleTx.wait();
+  console.log("Schneeballschlacht has been granted ESCROW_ROLE");
+
   for (let round = 1; round <= n; round++) {
     console.log(`Game ${id}:\tRound ${round} started!`);
     await newRound(id, round, schneeball);

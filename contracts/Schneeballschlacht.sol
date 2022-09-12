@@ -8,17 +8,21 @@ import "./IEscrow.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "./IHallOfFame.sol";
+// #if OPENSEA_POLYGON
+import "./OpenSeaPolygonProxy.sol";
 import "./common/meta-transactions/ContentMixin.sol";
 import "./common/meta-transactions/NativeMetaTransaction.sol";
-import "./IHallOfFame.sol";
-import "./OpenSeaPolygonProxy.sol";
+// #endif
 
 contract Schneeballschlacht is
     ISchneeballschlacht,
     ERC721Round,
     Pausable,
+// #if OPENSEA_POLYGON
     ContextMixin,
     NativeMetaTransaction,
+// #endif
     AccessControl
 {
     using Strings for uint8;
@@ -132,12 +136,13 @@ contract Schneeballschlacht is
         override
         returns (bool)
     {
+// #if OPENSEA_POLYGON
         // Whitelist OpenSea proxy contract for easy trading.
         ProxyRegistry proxyRegistry = ProxyRegistry(_proxyRegistryAddress);
         if (address(proxyRegistry.proxies(owner)) == operator) {
             return true;
         }
-
+// #endif
         return super.isApprovedForAll(owner, operator);
     }
 
@@ -199,7 +204,7 @@ contract Schneeballschlacht is
     {
         uint256 amountOfPartners = _snowballs[roundId][tokenId].partners.length;
         uint256[] memory partners = new uint256[](amountOfPartners);
-        for (uint256 i; i < amountOfPartners; i++) {
+        for (uint256 i = 0; i < amountOfPartners; i++) {
             partners[i] = _snowballs[roundId][tokenId].partners[i];
         }
         return partners;
@@ -226,7 +231,7 @@ contract Schneeballschlacht is
         uint256 amount = balanceOf(round, addr);
         Snowball[] memory snowballs = new Snowball[](amount);
 
-        for (uint256 index; index < amount; index++) {
+        for (uint256 index = 0; index < amount; index++) {
             snowballs[index] = _snowballs[round][
                 getTokenOwner(round, addr, index)
             ];
@@ -249,26 +254,23 @@ contract Schneeballschlacht is
         uint256 page,
         uint256 amount
     ) public view returns (Query[] memory) {
-        uint256 total = totalSupply(roundId) - 1;
+        require(amount > 0, "Amount > 0");
+        uint256 total = totalSupply(roundId);
         uint256 from = (amount * page) + 1;
-        require(from < total, "Out of bounds");
-        uint256 to = from + amount <= total ? from + amount : total;
+        require(from <= total, "Out of bounds");
+        uint256 to = (amount * page) + amount <= total ? (amount * page) + amount : total;
         uint256 i;
         Query[] memory result = new Query[](to - from + 1);
         for (uint256 tokenId = from; tokenId <= to; tokenId++) {
-            uint8 level = _snowballs[roundId][tokenId].level;
             // length is uint256 but we can cast to uint8 because max(length) === MAX_LEVEL
-            uint8 partnerCount = uint8(
-                _snowballs[roundId][tokenId].partners.length
-            );
-            bool snowballHasStone = _snowballs[roundId][tokenId].hasStone;
-            address player = ownerOf(tokenId);
             Query memory query = Query({
-                player: player,
+                player: ownerOf(tokenId),
                 tokenId: tokenId,
-                level: level,
-                partnerCount: partnerCount,
-                hasStone: snowballHasStone
+                level: _snowballs[roundId][tokenId].level,
+                partnerCount: uint8(
+                _snowballs[roundId][tokenId].partners.length
+                ),
+                hasStone: _snowballs[roundId][tokenId].hasStone
             });
             result[i++] = query;
         }
@@ -360,7 +362,7 @@ contract Schneeballschlacht is
 
         if (hasStone(level)) {
             _timeoutStart[to] = block.number;
-            _snowballs[roundId][tokenId].hasStone = true;
+            _snowballs[roundId][newTokenId].hasStone = true;
             emit Timeout(msg.sender, tokenId, to);
         }
 
@@ -645,21 +647,39 @@ contract Schneeballschlacht is
      * @dev This is used instead of msg.sender as transactions won't be sent by the original token owner, but by OpenSea.
      */
     function _msgSender() internal view override returns (address sender) {
+// #if OPENSEA_POLYGON
         return ContextMixin.msgSender();
+// #else
+        return msg.sender;
+// #endif
     }
 
-    function isTimedOut(address addr) external view returns (bool) {
+    function isTimedOut(address addr) public view returns (bool) {
         uint256 roundStart = getStartHeight();
         return
             !(_timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH <= block.number ||
                 _timeoutStart[addr] <= roundStart);
     }
 
-    function isOnCooldown(address addr) external view returns (bool) {
+    function isOnCooldown(address addr) public view returns (bool) {
         uint256 roundStart = getStartHeight();
         return
             !(_cooldownStart[addr] + COOLDOWN_BLOCK_LENGTH <= block.number ||
                 _cooldownStart[addr] <= roundStart);
+    }
+
+    function timedOutTill(address addr) external view returns (bool, uint256) {
+        if(isTimedOut(addr)) {
+            return (true, _timeoutStart[addr] + TIMEOUT_BLOCK_LENGTH);
+        }
+        return (false, 0);
+    }
+
+    function onCooldownTill(address addr) external view returns (bool, uint256) {
+        if(isOnCooldown(addr)) {
+            return (true, _cooldownStart[addr] + COOLDOWN_BLOCK_LENGTH);
+        }
+        return (false, 0);
     }
 
     function hasStone(uint8 level) internal view virtual returns (bool) {
@@ -683,5 +703,9 @@ contract Schneeballschlacht is
 
     function getEscrow(uint256 round) external view returns (IEscrow) {
         return _escrowManager.getEscrow(round);
+    }
+
+    function finished() external view returns (bool) {
+        return _finished;
     }
 }

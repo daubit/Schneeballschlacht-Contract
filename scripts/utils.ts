@@ -2,6 +2,7 @@
 import { BigNumber, Contract } from "ethers";
 import { parseEther } from "ethers/lib/utils";
 import { readFileSync } from "fs";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Deposits, RoundMeta, Tokens, History } from "./types";
 
 export const TOSS_FEE = (level: number) =>
@@ -87,3 +88,33 @@ export async function getToken(contract: Contract, address: string) {
   }
   return { token: maxToken, level: tmpLevel };
 }
+
+const NETWORK_NAME: { [chainId: number]: string } = {
+  80001: "mumbai",
+  137: "polygon",
+  1337: "development",
+};
+
+export const networkName = (chainId: number) =>
+  NETWORK_NAME[chainId]
+    ? NETWORK_NAME[chainId]
+    : new Error("Cannot find chain name");
+
+export const verify = async (
+  hardhat: HardhatRuntimeEnvironment,
+  adddress: string,
+  chainId: number,
+  params?: unknown[]
+) => {
+  console.log(chainId);
+  if ([80001, 137, 1337].includes(chainId)) {
+    await sleep(60 * 1000);
+    hardhat.run("verify", {
+      address: adddress,
+      network: networkName(chainId),
+      constructorArgsParams: params ?? [],
+    });
+  } else {
+    console.log(`Cannot verify for ChainId ${chainId}`);
+  }
+};
